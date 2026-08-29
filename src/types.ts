@@ -1,9 +1,14 @@
 export type FlyerTheme = 
+  | 'clean-white'
+  | 'white-blue'
+  | 'white-red'
+  | 'white-emerald'
+  | 'white-amber'
+  | 'white-minimal'
   | 'yellow-black' 
   | 'black-gold'
   | 'blue-yellow' 
   | 'red-black' 
-  | 'clean-white'
   | 'print-grayscale';
 
 export type FlyerFormat = 'vertical' | 'square' | 'card';

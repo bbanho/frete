@@ -74,13 +74,13 @@ export function generateWhatsAppBroadcastText(data: {
   const cleanCard2 = stripHtmlToWhatsApp(data.card2Content);
   const cleanCard3 = stripHtmlToWhatsApp(data.card3Content);
 
-  return `🚛 *${cleanTitle}* 🚛\n` +
-    (cleanDriver ? `👤 *${cleanDriver}*\n` : '') +
-    (cleanVehicle ? `🚚 *Veículo:* ${cleanVehicle}\n\n` : '\n') +
+  return `*${cleanTitle}*\n` +
+    (cleanDriver ? `*Motorista / Empresa:* ${cleanDriver}\n` : '') +
+    (cleanVehicle ? `*Veículo:* ${cleanVehicle}\n\n` : '\n') +
     `*${data.card2Title.toUpperCase()}:*\n${cleanCard2}\n\n` +
     `*${data.card3Title.toUpperCase()}:*\n${cleanCard3}\n\n` +
-    `📞 *CONTATO / WHATSAPP:* ${data.phone}\n` +
-    (data.phoneSecondary ? `📞 *Tel Secundário:* ${data.phoneSecondary}\n` : '') +
-    `📲 Link direto: ${getWhatsAppUrl(data.phone, '')}\n\n` +
+    `*CONTATO / WHATSAPP:* ${data.phone}\n` +
+    (data.phoneSecondary ? `*Tel Secundário:* ${data.phoneSecondary}\n` : '') +
+    `Link direto: ${getWhatsAppUrl(data.phone, '')}\n\n` +
     `_${stripHtmlToWhatsApp(data.footerText)}_`;
 }

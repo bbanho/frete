@@ -37,17 +37,17 @@ export const DEFAULT_FLYER_DATA: FlyerData = {
   card1Title: 'LIGUE OU CHAME NO WHATSAPP',
   card1Highlight: 'ORÇAMENTO RÁPIDO SEM COMPROMISSO • ATENDIMENTO 24H',
   
-  // Card 2 (Secundário 1): Serviços de Fretes (HTML Permitido)
+  // Card 2 (Secundário 1): Serviços de Fretes (Uma linha por item - HTML Permitido)
   card2Title: 'SERVIÇOS DE FRETES',
-  card2Content: '• <b>Fretes Urbanos & Intermunicipais</b><br>• Mudanças Residenciais & Comerciais<br>• <b>Cargas Fechadas e Pequenos Volumes</b><br>• Entregas e Coletas Rápidas',
+  card2Content: '<b>Fretes Urbanos e Intermunicipais</b><br><b>Mudanças Residenciais e Comerciais</b><br><b>Cargas Fechadas e Pequenos Volumes</b><br><b>Entregas e Coletas Rápidas no Dia</b>',
   
-  // Card 3 (Secundário 2): Região & Pagamento (HTML Permitido)
+  // Card 3 (Secundário 2): Região & Pagamento (Uma linha por item - HTML Permitido)
   card3Title: 'REGIÃO & PAGAMENTO',
-  card3Content: '📍 <b>Atendemos:</b> Capital, Interior e Litoral<br>💳 <b>Pagamento:</b> Aceitamos Pix, Cartão em até 12x e Dinheiro<br>⏱️ <b>Pontualidade & Cuidado com sua carga</b>',
+  card3Content: '<b>Atendimento:</b> Capital, Litoral e Interior<br><b>Pagamento:</b> Pix, Cartões em até 12x e Dinheiro<br><b>Agilidade:</b> Cargas com Cuidado e Pontualidade<br><b>Orçamento:</b> Rápido e Sem Compromisso',
   
   footerText: 'FRETES COM SEGURANÇA E CONFIANÇA • PEÇA SEU ORÇAMENTO AGORA!',
   showQrCode: true,
-  theme: 'yellow-black',
+  theme: 'clean-white',
   format: 'vertical',
   fontFamily: 'anton'
 };

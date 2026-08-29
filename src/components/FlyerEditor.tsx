@@ -9,13 +9,12 @@ import {
   QrCode, 
   Upload, 
   Type, 
-  MapPin, 
-  CreditCard,
+  Layers, 
   CheckCircle2,
   Code2,
-  Sparkles,
-  Layers,
-  Heading
+  Heading,
+  Sun,
+  Printer
 } from 'lucide-react';
 
 interface FlyerEditorProps {
@@ -64,13 +63,21 @@ export function FlyerEditor({ data, onChange }: FlyerEditorProps) {
     { id: 'rubik', name: 'Rubik Black', previewClass: 'font-rubik', desc: 'Robusta e Arredondada' }
   ];
 
-  const themes: { id: FlyerTheme; name: string; bg: string; text: string; border: string; desc?: string }[] = [
-    { id: 'yellow-black', name: 'Amarelo & Preto (Máximo Contraste)', bg: 'bg-amber-400', text: 'text-zinc-950', border: 'border-amber-400' },
-    { id: 'black-gold', name: 'Preto & Ouro Neon', bg: 'bg-zinc-950', text: 'text-amber-400', border: 'border-amber-400' },
-    { id: 'blue-yellow', name: 'Azul & Amarelo Comercial', bg: 'bg-blue-950', text: 'text-amber-400', border: 'border-blue-700' },
-    { id: 'red-black', name: 'Vermelho & Amarelo Alerta', bg: 'bg-red-700', text: 'text-yellow-300', border: 'border-red-600' },
-    { id: 'clean-white', name: 'Branco & Preto Contraste', bg: 'bg-zinc-100', text: 'text-zinc-950', border: 'border-zinc-400' },
-    { id: 'print-grayscale', name: 'P&B / Escala de Cinza Laser', bg: 'bg-white', text: 'text-black', border: 'border-black' }
+  const whiteThemes: { id: FlyerTheme; name: string; bg: string; text: string; tag: string }[] = [
+    { id: 'clean-white', name: 'Branco & Preto Contraste', bg: 'bg-white', text: 'text-black', tag: 'Clássico' },
+    { id: 'white-blue', name: 'Branco & Azul Royal', bg: 'bg-white', text: 'text-blue-900', tag: 'Transportes' },
+    { id: 'white-red', name: 'Branco & Vermelho', bg: 'bg-white', text: 'text-red-700', tag: 'Destaque' },
+    { id: 'white-emerald', name: 'Branco & Verde Esmeralda', bg: 'bg-white', text: 'text-emerald-800', tag: 'Confiança' },
+    { id: 'white-amber', name: 'Branco & Âmbar Asfalto', bg: 'bg-white', text: 'text-amber-600', tag: 'Rodoviário' },
+    { id: 'white-minimal', name: 'Branco Minimalista Laser', bg: 'bg-white', text: 'text-black', tag: 'Econômico' }
+  ];
+
+  const otherThemes: { id: FlyerTheme; name: string; bg: string; text: string; tag: string }[] = [
+    { id: 'yellow-black', name: 'Amarelo & Preto Impacto', bg: 'bg-amber-400', text: 'text-zinc-950', tag: 'Alta Visibilidade' },
+    { id: 'black-gold', name: 'Preto & Ouro Neon', bg: 'bg-zinc-950', text: 'text-amber-400', tag: 'Premium' },
+    { id: 'blue-yellow', name: 'Azul & Amarelo', bg: 'bg-blue-950', text: 'text-amber-400', tag: 'Comercial' },
+    { id: 'red-black', name: 'Vermelho & Preto', bg: 'bg-red-700', text: 'text-yellow-300', tag: 'Alerta' },
+    { id: 'print-grayscale', name: 'P&B / Escala de Cinza', bg: 'bg-zinc-100', text: 'text-black', tag: 'Impressão Laser' }
   ];
 
   const formats: { id: FlyerFormat; label: string }[] = [
@@ -82,7 +89,86 @@ export function FlyerEditor({ data, onChange }: FlyerEditorProps) {
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 space-y-6 text-zinc-100 shadow-2xl">
       
-      {/* 🔤 SELETOR DE FONTES IMPONENTES */}
+      {/* 1. SELETOR DE TEMAS & CORES (DESTACANDO MODELOS COM FUNDO BRANCO) */}
+      <div className="space-y-4 border-b border-zinc-800 pb-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-amber-400 font-bold text-base">
+            <Palette className="w-5 h-5" />
+            <span>Modelos & Cores do Panfleto</span>
+          </div>
+          <span className="text-[11px] bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded font-bold flex items-center gap-1">
+            <Sun className="w-3.5 h-3.5" /> Fundo Branco & Coloridos
+          </span>
+        </div>
+
+        {/* Grupo 1: Modelos de Fundo Branco */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
+              <Sun className="w-3.5 h-3.5 text-amber-400" />
+              Modelos com Fundo Branco (Alta Legibilidade & Impressão)
+            </span>
+            <span className="text-[10px] text-zinc-400 font-medium">6 opções</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {whiteThemes.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => onChange({ theme: t.id })}
+                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                  data.theme === t.id
+                    ? 'border-amber-400 ring-2 ring-amber-400/40 bg-zinc-800 font-bold'
+                    : 'border-zinc-800 bg-zinc-950 hover:border-zinc-700 text-zinc-300'
+                }`}
+              >
+                <div className={`w-full h-6 rounded mb-1.5 ${t.bg} border border-black/20 flex items-center justify-between px-2 font-black text-[11px] ${t.text} shadow-sm`}>
+                  <span>Aa FRETES</span>
+                  <span className="text-[9px] opacity-70 font-semibold">{t.tag}</span>
+                </div>
+                <div className="text-[11px] leading-tight font-bold truncate">
+                  {t.name}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Grupo 2: Modelos Coloridos & Escala de Cinza */}
+        <div className="space-y-2 pt-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
+              <Printer className="w-3.5 h-3.5 text-amber-400" />
+              Modelos Coloridos & Escala de Cinza
+            </span>
+            <span className="text-[10px] text-zinc-400 font-medium">5 opções</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {otherThemes.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => onChange({ theme: t.id })}
+                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                  data.theme === t.id
+                    ? 'border-amber-400 ring-2 ring-amber-400/40 bg-zinc-800 font-bold'
+                    : 'border-zinc-800 bg-zinc-950 hover:border-zinc-700 text-zinc-300'
+                }`}
+              >
+                <div className={`w-full h-6 rounded mb-1.5 ${t.bg} border border-black/20 flex items-center justify-between px-2 font-black text-[11px] ${t.text} shadow-sm`}>
+                  <span>Aa FRETES</span>
+                  <span className="text-[9px] opacity-70 font-semibold">{t.tag}</span>
+                </div>
+                <div className="text-[11px] leading-tight font-bold truncate">
+                  {t.name}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* 2. SELETOR DE FONTES IMPONENTES */}
       <div className="space-y-3 border-b border-zinc-800 pb-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-amber-400 font-bold text-base">
@@ -123,12 +209,12 @@ export function FlyerEditor({ data, onChange }: FlyerEditorProps) {
         </div>
       </div>
 
-      {/* 🌟 1. CARD EM DESTAQUE PRINCIPAL (TELEFONE & CONTATO) */}
+      {/* 3. CARD EM DESTAQUE PRINCIPAL (TELEFONE & CONTATO) */}
       <div className="space-y-4 border-b border-zinc-800 pb-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-amber-400 font-bold text-base">
             <Phone className="w-5 h-5" />
-            <span>1. Card em Destaque Principal (Telefone & Contato)</span>
+            <span>Card em Destaque Principal (Telefone & Contato)</span>
           </div>
           <span className="text-[10px] bg-amber-400 text-zinc-950 font-black px-2 py-0.5 rounded">
             Card 1 - Principal
@@ -223,17 +309,21 @@ export function FlyerEditor({ data, onChange }: FlyerEditorProps) {
         </div>
       </div>
 
-      {/* 🌟 2. OS 2 CARDS A SEGUIR (SERVIÇOS + REGIÃO/PAGAMENTO) */}
+      {/* 4. OS 2 CARDS A SEGUIR (SERVIÇOS + REGIÃO/PAGAMENTO) - UMA LINHA POR ITEM */}
       <div className="space-y-4 border-b border-zinc-800 pb-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-amber-400 font-bold text-base">
             <Layers className="w-5 h-5" />
-            <span>2. Os 2 Cards a Seguir (Serviços e Região)</span>
+            <span>Os 2 Cards a Seguir (Serviços e Região)</span>
           </div>
           <span className="text-[10px] bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded font-bold flex items-center gap-1">
-            <Code2 className="w-3 h-3 text-amber-400" /> Suporta HTML
+            <Code2 className="w-3 h-3 text-amber-400" /> 1 Linha por Item
           </span>
         </div>
+
+        <p className="text-xs text-zinc-400">
+          Cada linha é formatada automaticamente em uma entrada limpa e sem quebras. Separe as entradas com <code className="bg-zinc-800 px-1 py-0.5 rounded text-amber-300">&lt;br&gt;</code> ou nova linha.
+        </p>
 
         {/* CARD 2: SERVIÇOS */}
         <div className="bg-zinc-950/80 p-3 rounded-xl border border-zinc-800 space-y-2">
@@ -253,7 +343,7 @@ export function FlyerEditor({ data, onChange }: FlyerEditorProps) {
 
           <div className="flex items-center justify-between pt-1">
             <label className="text-xs font-semibold text-zinc-300">
-              Conteúdo dos Serviços (HTML permitido: &lt;b&gt;, &lt;br&gt;, &lt;span&gt;)
+              Itens dos Serviços (Uma linha por entrada)
             </label>
             <div className="flex gap-1">
               <button
@@ -280,10 +370,10 @@ export function FlyerEditor({ data, onChange }: FlyerEditorProps) {
             </div>
           </div>
           <textarea
-            rows={3}
+            rows={4}
             value={data.card2Content}
             onChange={(e) => onChange({ card2Content: e.target.value })}
-            placeholder="• <b>Fretes Urbanos & Intermunicipais</b><br>• Mudanças Residenciais & Comerciais..."
+            placeholder="<b>Fretes Urbanos e Intermunicipais</b><br><b>Mudanças Residenciais e Comerciais</b><br><b>Cargas Fechadas e Pequenos Volumes</b>"
             className="w-full bg-zinc-900 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-xs font-mono text-zinc-100 outline-none resize-none leading-relaxed"
           />
         </div>
@@ -306,7 +396,7 @@ export function FlyerEditor({ data, onChange }: FlyerEditorProps) {
 
           <div className="flex items-center justify-between pt-1">
             <label className="text-xs font-semibold text-zinc-300">
-              Conteúdo Região & Pagamento (HTML permitido)
+              Itens Região & Pagamento (Uma linha por entrada)
             </label>
             <div className="flex gap-1">
               <button
@@ -333,21 +423,21 @@ export function FlyerEditor({ data, onChange }: FlyerEditorProps) {
             </div>
           </div>
           <textarea
-            rows={3}
+            rows={4}
             value={data.card3Content}
             onChange={(e) => onChange({ card3Content: e.target.value })}
-            placeholder="📍 <b>Atendemos:</b> Capital, Litoral e Interior<br>💳 <b>Pagamento:</b> Pix, Cartão e Dinheiro"
+            placeholder="<b>Atendimento:</b> Capital, Litoral e Interior<br><b>Pagamento:</b> Pix, Cartão e Dinheiro<br><b>Agilidade:</b> Pontualidade e Cuidado"
             className="w-full bg-zinc-900 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-xs font-mono text-zinc-100 outline-none resize-none leading-relaxed"
           />
         </div>
       </div>
 
-      {/* 🚛 3. FOTO DO CAMINHÃO */}
+      {/* 5. FOTO ORIGINAL DO CAMINHÃO */}
       <div className="space-y-3 border-b border-zinc-800 pb-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-amber-400 font-bold text-base">
             <Truck className="w-5 h-5" />
-            <span>3. Foto Original do Caminhão</span>
+            <span>Foto Original do Caminhão</span>
           </div>
           <button
             type="button"
@@ -400,11 +490,11 @@ export function FlyerEditor({ data, onChange }: FlyerEditorProps) {
         </div>
       </div>
 
-      {/* 📝 4. TÍTULO, CABEÇALHO & RODAPÉ (HTML PERMITIDO) */}
+      {/* 6. TÍTULO, CABEÇALHO & RODAPÉ */}
       <div className="space-y-3 border-b border-zinc-800 pb-5">
         <div className="flex items-center gap-2 text-amber-400 font-bold text-base">
           <Type className="w-5 h-5" />
-          <span>4. Cabeçalho e Rodapé</span>
+          <span>Cabeçalho e Rodapé</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -477,57 +567,26 @@ export function FlyerEditor({ data, onChange }: FlyerEditorProps) {
         </div>
       </div>
 
-      {/* 🎨 5. TEMA DE ALTO CONTRASTE & FORMATO */}
+      {/* 7. FORMATO DO PANFLETO */}
       <div className="space-y-3">
-        <div className="flex items-center gap-2 text-amber-400 font-bold text-base">
-          <Palette className="w-5 h-5" />
-          <span>5. Cores & Formato do Panfleto</span>
-        </div>
-
-        {/* Escolha do Tema */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {themes.map((t) => (
+        <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+          Formato do Panfleto
+        </label>
+        <div className="grid grid-cols-3 gap-2">
+          {formats.map((f) => (
             <button
-              key={t.id}
+              key={f.id}
               type="button"
-              onClick={() => onChange({ theme: t.id })}
-              className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
-                data.theme === t.id
-                  ? 'border-amber-400 ring-2 ring-amber-400/40 bg-zinc-800 font-bold'
-                  : 'border-zinc-800 bg-zinc-950 hover:border-zinc-700 text-zinc-300'
+              onClick={() => onChange({ format: f.id })}
+              className={`py-2.5 px-2 text-center rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                data.format === f.id
+                  ? 'bg-amber-400 text-zinc-950 border-amber-400 font-black shadow-md'
+                  : 'bg-zinc-950 text-zinc-300 border-zinc-800 hover:border-zinc-700'
               }`}
             >
-              <div className={`w-full h-5 rounded mb-1.5 ${t.bg} border border-black/20 flex items-center justify-center font-black text-[11px] ${t.text}`}>
-                Aa FRETES
-              </div>
-              <div className="text-[11px] leading-tight truncate">
-                {t.name}
-              </div>
+              {f.label}
             </button>
           ))}
-        </div>
-
-        {/* Formato */}
-        <div className="pt-2">
-          <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
-            Formato do Panfleto
-          </label>
-          <div className="grid grid-cols-3 gap-2">
-            {formats.map((f) => (
-              <button
-                key={f.id}
-                type="button"
-                onClick={() => onChange({ format: f.id })}
-                className={`py-2 px-2 text-center rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-                  data.format === f.id
-                    ? 'bg-amber-400 text-zinc-950 border-amber-400 font-black'
-                    : 'bg-zinc-950 text-zinc-300 border-zinc-800 hover:border-zinc-700'
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 
