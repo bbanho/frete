@@ -1,6 +1,6 @@
-import React, { useRef } from 'react';
-import { FlyerData, FlyerTheme, FlyerFormat, ImposingFont, FlyerElementKey } from '../types';
-import { TRUCK_PRESETS } from '../data/defaults';
+import React, { useRef, useState, useCallback } from 'react';
+import { FlyerData, FlyerTheme, FlyerFormat, ImposingFont, FlyerElementKey, FlyerTemplate, ImagePosition, TruckViewPreset } from '../types';
+import { TRUCK_PRESETS, TRUCK_VIEW_PRESETS, FLYER_TEMPLATES, DEFAULT_IMAGE_POSITION } from '../data/defaults';
 import { formatPhoneMask } from '../utils/flyerHelpers';
 import { ElementOrderManager } from './ElementOrderManager';
 import { 
@@ -18,16 +18,46 @@ import {
   Printer,
   Sparkles,
   Scissors,
-  GripVertical
+  GripVertical,
+  Image,
+  Move,
+  RotateCw,
+  Maximize,
+  Minimize,
+  Grid,
+  Layout,
+  Mountain,
+  Loader,
+  RefreshCw,
+  Download,
+  FileText,
+  SlidersHorizontal,
+  ArrowUpDown,
+  ArrowLeftRight,
+  Expand,
+  Camera,
+  Image as ImageIcon,
+  Crosshair
 } from 'lucide-react';
 
 interface FlyerEditorProps {
   data: FlyerData;
   onChange: (updated: Partial<FlyerData>) => void;
+  selectedElement: FlyerElementKey;
+  onSelectedElementChange: (key: FlyerElementKey) => void;
 }
 
-export function FlyerEditor({ data, onChange }: FlyerEditorProps) {
+const ELEMENT_GROUPS: { key: FlyerElementKey; label: string; icon: React.ReactNode; fields: string[] }[] = [
+  { key: 'header', label: 'Cabeçalho', icon: <Type className="w-4 h-4" />, fields: ['title', 'subtitle', 'driverName'] },
+  { key: 'photo', label: 'Foto do Caminhão', icon: <Image className="w-4 h-4" />, fields: ['truckPhotoUrl', 'vehicleType', 'imagePosition', 'truckViewPreset'] },
+  { key: 'card1', label: 'Card Principal (Contato)', icon: <Phone className="w-4 h-4" />, fields: ['phone', 'phoneSecondary', 'card1Title', 'card1Highlight', 'showQrCode'] },
+  { key: 'servicesCards', label: 'Cards de Serviços', icon: <Layers className="w-4 h-4" />, fields: ['card2Title', 'card2Content', 'card3Title', 'card3Content'] },
+  { key: 'footer', label: 'Rodapé', icon: <FileText className="w-4 h-4" />, fields: ['footerText'] }
+];
+
+export function FlyerEditor({ data, onChange, selectedElement, onSelectedElementChange }: FlyerEditorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showAllElements, setShowAllElements] = useState(false);
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatPhoneMask(e.target.value);
@@ -52,6 +82,35 @@ export function FlyerEditor({ data, onChange }: FlyerEditorProps) {
     }
   };
 
+  const handleImagePositionChange = (field: keyof ImagePosition, value: number) => {
+    onChange({ imagePosition: { ...(data.imagePosition || DEFAULT_IMAGE_POSITION), [field]: value } });
+  };
+
+  const handleTruckViewPresetChange = (preset: TruckViewPreset) => {
+    const presetData = TRUCK_VIEW_PRESETS.find(p => p.id === preset);
+    if (presetData) {
+      onChange({ 
+        truckViewPreset: preset,
+        imagePosition: presetData.position
+      });
+    }
+  };
+
+  const handleTemplateChange = (template: FlyerTemplate) => {
+    const templateOrders: Record<FlyerTemplate, FlyerElementKey[]> = {
+      'classic': ['header', 'photo', 'card1', 'servicesCards', 'footer'],
+      'photo-focused': ['photo', 'card1', 'servicesCards', 'footer'],
+      'contact-heavy': ['card1', 'photo', 'servicesCards', 'footer'],
+      'services-grid': ['header', 'photo', 'servicesCards', 'footer'],
+      'minimal': ['header', 'card1', 'footer'],
+      'double-deck': ['header', 'photo', 'card1', 'servicesCards', 'footer']
+    };
+    onChange({ 
+      template,
+      elementOrder: templateOrders[template] || ['header', 'photo', 'card1', 'servicesCards', 'footer']
+    });
+  };
+
   // Helper to insert quick HTML tag into an input or textarea
   const insertHtmlTag = (field: keyof FlyerData, openTag: string, closeTag: string = '') => {
     const currentVal = (data[field] as string) || '';
@@ -59,7 +118,7 @@ export function FlyerEditor({ data, onChange }: FlyerEditorProps) {
   };
 
   const fonts: { id: ImposingFont; name: string; previewClass: string; desc: string }[] = [
-    { id: 'anton', name: 'Anton Heavy', previewClass: 'font-anton', desc: 'Padrão Pôster & Outdoor Impactante' },
+    { id: 'anton', name: 'Anton Heavy', previewClass: 'font-anton', desc: 'Pôster & Outdoor Impactante' },
     { id: 'bebas', name: 'Bebas Neue', previewClass: 'font-bebas', desc: 'Condensada Clássica Comercial' },
     { id: 'archivo', name: 'Archivo Black', previewClass: 'font-archivo', desc: 'Maciça e Ultra Legível' },
     { id: 'oswald', name: 'Oswald Bold', previewClass: 'font-oswald', desc: 'Moderna e Imponente' },
@@ -93,495 +152,532 @@ export function FlyerEditor({ data, onChange }: FlyerEditorProps) {
     { id: 'card', label: 'Cartão de Visita', desc: 'Panfleto Compacto de Bolso', iconTag: 'Compacto' }
   ];
 
-  return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 space-y-6 text-zinc-100 shadow-2xl">
-      
-      {/* 1. SELETOR DE TEMAS & CORES (DESTACANDO MODELOS COM FUNDO BRANCO) */}
-      <div className="space-y-4 border-b border-zinc-800 pb-5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-amber-400 font-bold text-base">
-            <Palette className="w-5 h-5" />
-            <span>Modelos & Cores do Panfleto</span>
-          </div>
-          <span className="text-[11px] bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded font-bold flex items-center gap-1">
-            <Sun className="w-3.5 h-3.5" /> Fundo Branco & Coloridos
-          </span>
-        </div>
+  /* ============ RENDER SECTIONS ============ */
 
-        {/* Grupo 1: Modelos de Fundo Branco */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
-              <Sun className="w-3.5 h-3.5 text-amber-400" />
-              Modelos com Fundo Branco (Alta Legibilidade & Impressão)
-            </span>
-            <span className="text-[10px] text-zinc-400 font-medium">6 opções</span>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {whiteThemes.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => onChange({ theme: t.id })}
-                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                  data.theme === t.id
-                    ? 'border-amber-400 ring-2 ring-amber-400/40 bg-zinc-800 font-bold'
-                    : 'border-zinc-800 bg-zinc-950 hover:border-zinc-700 text-zinc-300'
-                }`}
-              >
-                <div className={`w-full h-6 rounded mb-1.5 ${t.bg} border border-black/20 flex items-center justify-between px-2 font-black text-[11px] ${t.text} shadow-sm`}>
-                  <span>Aa FRETES</span>
-                  <span className="text-[9px] opacity-70 font-semibold">{t.tag}</span>
-                </div>
-                <div className="text-[11px] leading-tight font-bold truncate">
-                  {t.name}
-                </div>
-              </button>
-            ))}
-          </div>
+  const renderThemes = useCallback(() => (
+    <div className="space-y-4 border-b border-zinc-800 pb-5">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-amber-400 font-bold text-base">
+          <Palette className="w-5 h-5" />
+          <span>Modelos & Cores do Panfleto</span>
         </div>
-
-        {/* Grupo 2: Modelos Coloridos & Escala de Cinza */}
-        <div className="space-y-2 pt-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
-              <Printer className="w-3.5 h-3.5 text-amber-400" />
-              Modelos Coloridos & Escala de Cinza
-            </span>
-            <span className="text-[10px] text-zinc-400 font-medium">5 opções</span>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {otherThemes.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => onChange({ theme: t.id })}
-                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                  data.theme === t.id
-                    ? 'border-amber-400 ring-2 ring-amber-400/40 bg-zinc-800 font-bold'
-                    : 'border-zinc-800 bg-zinc-950 hover:border-zinc-700 text-zinc-300'
-                }`}
-              >
-                <div className={`w-full h-6 rounded mb-1.5 ${t.bg} border border-black/20 flex items-center justify-between px-2 font-black text-[11px] ${t.text} shadow-sm`}>
-                  <span>Aa FRETES</span>
-                  <span className="text-[9px] opacity-70 font-semibold">{t.tag}</span>
-                </div>
-                <div className="text-[11px] leading-tight font-bold truncate">
-                  {t.name}
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
+        <span className="text-[11px] bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded font-bold flex items-center gap-1">
+          <Sun className="w-3.5 h-3.5" /> Fundo Branco & Coloridos
+        </span>
       </div>
 
-      {/* 2. SELETOR DE FONTES IMPONENTES */}
-      <div className="space-y-3 border-b border-zinc-800 pb-5">
+      {/* Grupo 1: Modelos de Fundo Branco */}
+      <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-amber-400 font-bold text-base">
-            <Heading className="w-5 h-5" />
-            <span>Seletor de Fontes Imponentes</span>
-          </div>
-          <span className="text-[11px] bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded font-bold">
-            Alta Visibilidade
+          <span className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
+            <Sun className="w-3.5 h-3.5 text-amber-400" />
+            Modelos com Fundo Branco (Alta Legibilidade & Impressão)
           </span>
+          <span className="text-[10px] text-zinc-400 font-medium">6 opções</span>
         </div>
-        <p className="text-xs text-zinc-400">
-          Escolha uma tipografia de peso pesado para destacar o título e o telefone à distância:
-        </p>
-
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {fonts.map((f) => (
+          {whiteThemes.map((t) => (
             <button
-              key={f.id}
+              key={t.id}
               type="button"
-              onClick={() => onChange({ fontFamily: f.id })}
-              className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                data.fontFamily === f.id
-                  ? 'border-amber-400 bg-amber-400/15 ring-2 ring-amber-400/40 text-amber-300'
+              onClick={() => onChange({ theme: t.id })}
+              className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                data.theme === t.id
+                  ? 'border-amber-400 ring-2 ring-amber-400/40 bg-zinc-800 font-bold'
                   : 'border-zinc-800 bg-zinc-950 hover:border-zinc-700 text-zinc-300'
               }`}
             >
-              <div className={`text-xl font-black leading-tight ${f.previewClass} truncate`}>
-                FRETES 1218
+              <div className={`w-full h-6 rounded mb-1.5 ${t.bg} border border-black/20 flex items-center justify-between px-2 font-black text-[11px] ${t.text} shadow-sm`}>
+                <span>Aa FRETES</span>
+                <span className="text-[9px] opacity-70 font-semibold">{t.tag}</span>
               </div>
-              <div className="text-xs font-bold mt-1 text-zinc-200">
-                {f.name}
-              </div>
-              <div className="text-[10px] text-zinc-400 truncate">
-                {f.desc}
+              <div className="text-[11px] leading-tight font-bold truncate">
+                {t.name}
               </div>
             </button>
           ))}
         </div>
       </div>
 
-      {/* 3. CARD EM DESTAQUE PRINCIPAL (TELEFONE & CONTATO) */}
-      <div className="space-y-4 border-b border-zinc-800 pb-5">
+      {/* Grupo 2: Modelos Coloridos & Escala de Cinza */}
+      <div className="space-y-2 pt-2">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-amber-400 font-bold text-base">
-            <Phone className="w-5 h-5" />
-            <span>Card em Destaque Principal (Telefone & Contato)</span>
-          </div>
-          <span className="text-[10px] bg-amber-400 text-zinc-950 font-black px-2 py-0.5 rounded">
-            Card 1 - Principal
+          <span className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
+            <Printer className="w-3.5 h-3.5 text-amber-400" />
+            Modelos Coloridos & Escala de Cinza
           </span>
+          <span className="text-[10px] text-zinc-400 font-medium">5 opções</span>
         </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-zinc-300 mb-1">
-              Telefone Principal (Destaque Gigante) *
-            </label>
-            <input
-              type="text"
-              value={data.phone}
-              onChange={handlePhoneChange}
-              placeholder="Ex: (11) 98765-4321 (WhatsApp Direto)"
-              maxLength={15}
-              className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 rounded-lg px-3 py-2.5 text-base font-black text-amber-300 outline-none placeholder:text-zinc-600"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-zinc-300 mb-1">
-              Telefone Secundário (Opcional)
-            </label>
-            <input
-              type="text"
-              value={data.phoneSecondary}
-              onChange={handleSecondaryPhoneChange}
-              placeholder="Ex: (11) 91234-5678 (Fixo ou 2º WhatsApp)"
-              maxLength={15}
-              className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2.5 text-sm text-zinc-200 font-bold outline-none placeholder:text-zinc-600"
-            />
-          </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {otherThemes.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => onChange({ theme: t.id })}
+              className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                data.theme === t.id
+                  ? 'border-amber-400 ring-2 ring-amber-400/40 bg-zinc-800 font-bold'
+                  : 'border-zinc-800 bg-zinc-950 hover:border-zinc-700 text-zinc-300'
+              }`}
+            >
+              <div className={`w-full h-6 rounded mb-1.5 ${t.bg} border border-black/20 flex items-center justify-between px-2 font-black text-[11px] ${t.text} shadow-sm`}>
+                <span>Aa FRETES</span>
+                <span className="text-[9px] opacity-70 font-semibold">{t.tag}</span>
+              </div>
+              <div className="text-[11px] leading-tight font-bold truncate">
+                {t.name}
+              </div>
+            </button>
+          ))}
         </div>
+      </div>
+    </div>
+  ), [data.theme, onChange]);
 
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <label className="text-xs font-semibold text-zinc-300">
-              Título do Card Principal (Aceita HTML)
-            </label>
-            <div className="flex gap-1">
-              <button
-                type="button"
-                onClick={() => insertHtmlTag('card1Title', '<b>', '</b>')}
-                className="px-1.5 py-0.5 text-[10px] bg-zinc-800 hover:bg-zinc-700 rounded text-zinc-300"
-              >
-                &lt;b&gt;
-              </button>
-              <button
-                type="button"
-                onClick={() => insertHtmlTag('card1Title', '<span style="color:#facc15">', '</span>')}
-                className="px-1.5 py-0.5 text-[10px] bg-zinc-800 hover:bg-zinc-700 rounded text-zinc-300"
-              >
-                cor
-              </button>
+  const renderFonts = useCallback(() => (
+    <div className="space-y-3 border-b border-zinc-800 pb-5">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-amber-400 font-bold text-base">
+          <Heading className="w-5 h-5" />
+          <span>Seletor de Fontes Imponentes</span>
+        </div>
+        <span className="text-[11px] bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded font-bold">
+          Alta Visibilidade
+        </span>
+      </div>
+      <p className="text-xs text-zinc-400">
+        Escolha uma tipografia de peso pesado para destacar o título e o telefone à distância:
+      </p>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        {fonts.map((f) => (
+          <button
+            key={f.id}
+            type="button"
+            onClick={() => onChange({ fontFamily: f.id })}
+            className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+              data.fontFamily === f.id
+                ? 'border-amber-400 bg-amber-400/15 ring-2 ring-amber-400/40 text-amber-300'
+                : 'border-zinc-800 bg-zinc-950 hover:border-zinc-700 text-zinc-300'
+            }`}
+          >
+            <div className={`text-xl font-black leading-tight ${f.previewClass} truncate`}>
+              FRETES 1218
             </div>
-          </div>
+            <div className="text-xs font-bold mt-1 text-zinc-200">
+              {f.name}
+            </div>
+            <div className="text-[10px] text-zinc-400 truncate">
+              {f.desc}
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  ), [data.fontFamily, onChange]);
+
+  const renderCard1 = useCallback(() => (
+    <div className="space-y-4 border-b border-zinc-800 pb-5">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-amber-400 font-bold text-base">
+          <Phone className="w-5 h-5" />
+          <span>Card em Destaque Principal (Telefone & Contato)</span>
+        </div>
+        <span className="text-[10px] bg-amber-400 text-zinc-950 font-black px-2 py-0.5 rounded">
+          Card 1 - Principal
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-semibold text-zinc-300 mb-1">
+            Telefone Principal (Destaque Gigante) *
+          </label>
           <input
             type="text"
-            value={data.card1Title}
-            onChange={(e) => onChange({ card1Title: e.target.value })}
-            placeholder="Ex: LIGUE AGORA OU CHAME NO WHATSAPP • ATENDIMENTO 24H"
-            className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-xs font-bold text-zinc-100 outline-none placeholder:text-zinc-600"
+            value={data.phone}
+            onChange={handlePhoneChange}
+            placeholder="Ex: (11) 98765-4321 (WhatsApp Direto)"
+            maxLength={15}
+            className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 rounded-lg px-3 py-2.5 text-base font-black text-amber-300 outline-none placeholder:text-zinc-600"
           />
-          {/* Sugestões rápidas de título do card 1 */}
-          <div className="flex flex-wrap gap-1.5 mt-1.5 items-center">
-            <span className="text-[10px] text-zinc-500 flex items-center gap-1"><Sparkles className="w-2.5 h-2.5 text-amber-400" /> Sugestões:</span>
-            {[
-              'LIGUE OU CHAME NO WHATSAPP',
-              'DISK FRETES RÁPIDO & WHATSAPP',
-              'SOLICITE SEU ORÇAMENTO AGORA'
-            ].map((text) => (
-              <button
-                key={text}
-                type="button"
-                onClick={() => onChange({ card1Title: text })}
-                className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded transition-colors"
-              >
-                {text}
-              </button>
-            ))}
-          </div>
         </div>
 
         <div>
           <label className="block text-xs font-semibold text-zinc-300 mb-1">
-            Chamada de Urgência / Subtítulo do Card (Aceita HTML)
+            Telefone Secundário (Opcional)
           </label>
           <input
             type="text"
-            value={data.card1Highlight}
-            onChange={(e) => onChange({ card1Highlight: e.target.value })}
-            placeholder="Ex: ORÇAMENTO RÁPIDO SEM COMPROMISSO • COBRIMOS QUALQUER OFERTA"
-            className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-xs text-zinc-200 outline-none placeholder:text-zinc-600"
+            value={data.phoneSecondary}
+            onChange={handleSecondaryPhoneChange}
+            placeholder="Ex: (11) 91234-5678 (Fixo ou 2º WhatsApp)"
+            maxLength={15}
+            className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2.5 text-sm text-zinc-200 font-bold outline-none placeholder:text-zinc-600"
           />
-          {/* Sugestões rápidas de chamada de urgência */}
-          <div className="flex flex-wrap gap-1.5 mt-1.5 items-center">
-            <span className="text-[10px] text-zinc-500 flex items-center gap-1"><Sparkles className="w-2.5 h-2.5 text-amber-400" /> Sugestões:</span>
-            {[
-              'ORÇAMENTO RÁPIDO SEM COMPROMISSO • ATENDIMENTO 24H',
-              'PREÇO JUSTO • SAÍDAS IMEDIATAS TODOS OS DIAS',
-              'COBRIMOS QUALQUER ORÇAMENTO • CHAME JÁ'
-            ].map((text) => (
-              <button
-                key={text}
-                type="button"
-                onClick={() => onChange({ card1Highlight: text })}
-                className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded transition-colors"
-              >
-                {text}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between pt-1">
-          <label className="flex items-center gap-2 text-xs font-medium text-zinc-300 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={data.showQrCode}
-              onChange={(e) => onChange({ showQrCode: e.target.checked })}
-              className="w-4 h-4 text-amber-500 rounded border-zinc-700 bg-zinc-950 focus:ring-amber-400"
-            />
-            <QrCode className="w-4 h-4 text-zinc-400" />
-            <span>Exibir QR Code para abrir o WhatsApp na hora</span>
-          </label>
         </div>
       </div>
 
-      {/* 4. OS 2 CARDS A SEGUIR (SERVIÇOS + REGIÃO/PAGAMENTO) - UMA LINHA POR ITEM */}
-      <div className="space-y-4 border-b border-zinc-800 pb-5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-amber-400 font-bold text-base">
-            <Layers className="w-5 h-5" />
-            <span>Os 2 Cards a Seguir (Serviços e Região)</span>
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <label className="text-xs font-semibold text-zinc-300">
+            Título do Card Principal (Aceita HTML)
+          </label>
+          <div className="flex gap-1">
+            <button
+              type="button"
+              onClick={() => insertHtmlTag('card1Title', '<b>', '</b>')}
+              className="px-1.5 py-0.5 text-[10px] bg-zinc-800 hover:bg-zinc-700 rounded text-zinc-300"
+            >
+              &lt;b&gt;
+            </button>
+            <button
+              type="button"
+              onClick={() => insertHtmlTag('card1Title', '<span style="color:#facc15">', '</span>')}
+              className="px-1.5 py-0.5 text-[10px] bg-zinc-800 hover:bg-zinc-700 rounded text-zinc-300"
+            >
+              cor
+            </button>
           </div>
-          <span className="text-[10px] bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded font-bold flex items-center gap-1">
-            <Code2 className="w-3 h-3 text-amber-400" /> 1 Linha por Item
-          </span>
         </div>
+        <input
+          type="text"
+          value={data.card1Title}
+          onChange={(e) => onChange({ card1Title: e.target.value })}
+          placeholder="Ex: LIGUE AGORA OU CHAME NO WHATSAPP • ATENDIMENTO 24H"
+          className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-xs font-bold text-zinc-100 outline-none placeholder:text-zinc-600"
+        />
+        {/* Sugestões rápidas de título do card 1 */}
+        <div className="flex flex-wrap gap-1.5 mt-1.5 items-center">
+          <span className="text-[10px] text-zinc-500 flex items-center gap-1"><Sparkles className="w-2.5 h-2.5 text-amber-400" /> Sugestões:</span>
+          {[
+            'LIGUE OU CHAME NO WHATSAPP',
+            'DISK FRETES RÁPIDO & WHATSAPP',
+            'SOLICITE SEU ORÇAMENTO AGORA'
+          ].map((text) => (
+            <button
+              key={text}
+              type="button"
+              onClick={() => onChange({ card1Title: text })}
+              className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded transition-colors"
+            >
+              {text}
+            </button>
+          ))}
+        </div>
+      </div>
 
-        <p className="text-xs text-zinc-400">
-          Cada linha é formatada automaticamente em uma entrada limpa e sem quebras. Separe as entradas com <code className="bg-zinc-800 px-1 py-0.5 rounded text-amber-300">&lt;br&gt;</code> ou nova linha.
-        </p>
+      <div>
+        <label className="block text-xs font-semibold text-zinc-300 mb-1">
+          Chamada de Urgência / Subtítulo do Card (Aceita HTML)
+        </label>
+        <input
+          type="text"
+          value={data.card1Highlight}
+          onChange={(e) => onChange({ card1Highlight: e.target.value })}
+          placeholder="Ex: ORÇAMENTO RÁPIDO SEM COMPROMISSO • COBRIMOS QUALQUER OFERTA"
+          className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-xs text-zinc-200 outline-none placeholder:text-zinc-600"
+        />
+        {/* Sugestões rápidas de chamada de urgência */}
+        <div className="flex flex-wrap gap-1.5 mt-1.5 items-center">
+          <span className="text-[10px] text-zinc-500 flex items-center gap-1"><Sparkles className="w-2.5 h-2.5 text-amber-400" /> Sugestões:</span>
+          {[
+            'ORÇAMENTO RÁPIDO SEM COMPROMISSO • ATENDIMENTO 24H',
+            'PREÇO JUSTO • SAÍDAS IMEDIATAS TODOS OS DIAS',
+            'COBRIMOS QUALQUER ORÇAMENTO • CHAME JÁ'
+          ].map((text) => (
+            <button
+              key={text}
+              type="button"
+              onClick={() => onChange({ card1Highlight: text })}
+              className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded transition-colors"
+            >
+              {text}
+            </button>
+          ))}
+        </div>
+      </div>
 
-        {/* CARD 2: SERVIÇOS */}
-        <div className="bg-zinc-950/80 p-3 rounded-xl border border-zinc-800 space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-bold text-amber-300">
-              Card 2: Título dos Serviços
-            </label>
-            <span className="text-[10px] text-zinc-400">Card Secundário 1</span>
-          </div>
+      <div className="flex items-center justify-between pt-1">
+        <label className="flex items-center gap-2 text-xs font-medium text-zinc-300 cursor-pointer">
           <input
-            type="text"
-            value={data.card2Title}
-            onChange={(e) => onChange({ card2Title: e.target.value })}
-            placeholder="Ex: SERVIÇOS DE FRETES (ou NOSSOS SERVIÇOS)"
-            className="w-full bg-zinc-900 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-1.5 text-xs font-bold text-zinc-100 outline-none placeholder:text-zinc-600"
+            type="checkbox"
+            checked={data.showQrCode}
+            onChange={(e) => onChange({ showQrCode: e.target.checked })}
+            className="w-4 h-4 text-amber-500 rounded border-zinc-700 bg-zinc-950 focus:ring-amber-400"
           />
+          <QrCode className="w-4 h-4 text-zinc-400" />
+          <span>Exibir QR Code para abrir o WhatsApp na hora</span>
+        </label>
+      </div>
+    </div>
+  ), [data.phone, data.phoneSecondary, data.card1Title, data.card1Highlight, data.showQrCode, onChange]);
 
-          <div className="flex items-center justify-between pt-1">
-            <label className="text-xs font-semibold text-zinc-300">
-              Itens dos Serviços (Uma linha por entrada)
-            </label>
-            <div className="flex gap-1">
-              <button
-                type="button"
-                onClick={() => insertHtmlTag('card2Content', '<b>', '</b>')}
-                className="px-1.5 py-0.5 text-[10px] bg-zinc-800 hover:bg-zinc-700 rounded text-zinc-300 font-bold"
-              >
-                &lt;b&gt;negrito&lt;/b&gt;
-              </button>
-              <button
-                type="button"
-                onClick={() => insertHtmlTag('card2Content', '<br>')}
-                className="px-1.5 py-0.5 text-[10px] bg-zinc-800 hover:bg-zinc-700 rounded text-zinc-300"
-              >
-                &lt;br&gt;
-              </button>
-              <button
-                type="button"
-                onClick={() => insertHtmlTag('card2Content', '<span style="color:#facc15">', '</span>')}
-                className="px-1.5 py-0.5 text-[10px] bg-zinc-800 hover:bg-zinc-700 rounded text-amber-300"
-              >
-                &lt;cor&gt;
-              </button>
-            </div>
+  const renderServicesCards = useCallback(() => (
+    <div className="space-y-4 border-b border-zinc-800 pb-5">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-amber-400 font-bold text-base">
+          <Layers className="w-5 h-5" />
+          <span>Os 2 Cards a Seguir (Serviços e Região)</span>
+        </div>
+        <span className="text-[10px] bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded font-bold flex items-center gap-1">
+          <Code2 className="w-3 h-3 text-amber-400" /> 1 Linha por Item
+        </span>
+      </div>
+
+      <p className="text-xs text-zinc-400">
+        Cada linha é formatada automaticamente em uma entrada limpa e sem quebras. Separe as entradas com <code className="bg-zinc-800 px-1 py-0.5 rounded text-amber-300">&lt;br&gt;</code> ou nova linha.
+      </p>
+
+      {/* CARD 2: SERVIÇOS */}
+      <div className="bg-zinc-950/80 p-3 rounded-xl border border-zinc-800 space-y-2">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-bold text-amber-300">
+            Card 2: Título dos Serviços
+          </label>
+          <span className="text-[10px] text-zinc-400">Card Secundário 1</span>
+        </div>
+        <input
+          type="text"
+          value={data.card2Title}
+          onChange={(e) => onChange({ card2Title: e.target.value })}
+          placeholder="Ex: SERVIÇOS DE FRETES (ou NOSSOS SERVIÇOS)"
+          className="w-full bg-zinc-900 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-1.5 text-xs font-bold text-zinc-100 outline-none placeholder:text-zinc-600"
+        />
+
+        <div className="flex items-center justify-between pt-1">
+          <label className="text-xs font-semibold text-zinc-300">
+            Itens dos Serviços (Uma linha por entrada)
+          </label>
+          <div className="flex gap-1">
+            <button
+              type="button"
+              onClick={() => insertHtmlTag('card2Content', '<b>', '</b>')}
+              className="px-1.5 py-0.5 text-[10px] bg-zinc-800 hover:bg-zinc-700 rounded text-zinc-300 font-bold"
+            >
+              &lt;b&gt;negrito&lt;/b&gt;
+            </button>
+            <button
+              type="button"
+              onClick={() => insertHtmlTag('card2Content', '<br>')}
+              className="px-1.5 py-0.5 text-[10px] bg-zinc-800 hover:bg-zinc-700 rounded text-zinc-300"
+            >
+              &lt;br&gt;
+            </button>
+            <button
+              type="button"
+              onClick={() => insertHtmlTag('card2Content', '<span style="color:#facc15">', '</span>')}
+              className="px-1.5 py-0.5 text-[10px] bg-zinc-800 hover:bg-zinc-700 rounded text-amber-300"
+            >
+              &lt;cor&gt;
+            </button>
           </div>
-          <textarea
-            rows={4}
-            value={data.card2Content}
-            onChange={(e) => onChange({ card2Content: e.target.value })}
-            placeholder={`Exemplos reais e vendedores (1 item por linha):
+        </div>
+        <textarea
+          rows={4}
+          value={data.card2Content}
+          onChange={(e) => onChange({ card2Content: e.target.value })}
+          placeholder={`Exemplos reais e vendedores (1 item por linha):
 <b>Fretes Urbanos e Intermunicipais</b>
 <b>Mudanças Residenciais e Comerciais</b>
 <b>Cargas Fechadas e Pequenos Volumes</b>
 <b>Entregas e Coletas Rápidas no Dia</b>`}
-            className="w-full bg-zinc-900 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-xs font-mono text-zinc-100 outline-none resize-none leading-relaxed placeholder:text-zinc-600"
-          />
-          {/* Presets rápidos para Card 2 */}
-          <div className="flex flex-wrap gap-1.5 pt-1 items-center">
-            <span className="text-[10px] text-zinc-500 flex items-center gap-1"><Sparkles className="w-2.5 h-2.5 text-amber-400" /> Preencher com:</span>
+          className="w-full bg-zinc-900 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-xs font-mono text-zinc-100 outline-none resize-none leading-relaxed placeholder:text-zinc-600"
+        />
+        {/* Presets rápidos para Card 2 */}
+        <div className="flex flex-wrap gap-1.5 pt-1 items-center">
+          <span className="text-[10px] text-zinc-500 flex items-center gap-1"><Sparkles className="w-2.5 h-2.5 text-amber-400" /> Preencher com:</span>
+          <button
+            type="button"
+            onClick={() => onChange({
+              card2Title: 'SERVIÇOS DE FRETES',
+              card2Content: '<b>Fretes Urbanos e Intermunicipais</b><br><b>Mudanças Residenciais e Comerciais</b><br><b>Cargas Fechadas e Pequenos Volumes</b><br><b>Entregas e Coletas Rápidas no Dia</b>'
+            })}
+            className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded transition-colors"
+          >
+            Fretes & Mudanças
+          </button>
+          <button
+            type="button"
+            onClick={() => onChange({
+              card2Title: 'SERVIÇOS DE TRANSPORTES',
+              card2Content: '<b>Coletas e Entregas Comerciais</b><br><b>Cargas Fracionadas e Dedicadas</b><br><b>Distribuição de Mercadorias</b><br><b>Viagens para Todo o Estado</b>'
+            })}
+            className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded transition-colors"
+          >
+            Comercial & Cargas
+          </button>
+        </div>
+      </div>
+
+      {/* CARD 3: REGIÃO & PAGAMENTO */}
+      <div className="bg-zinc-950/80 p-3 rounded-xl border border-zinc-800 space-y-2">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-bold text-amber-300">
+            Card 3: Título Região & Pagamento
+          </label>
+          <span className="text-[10px] text-zinc-400">Card Secundário 2</span>
+        </div>
+        <input
+          type="text"
+          value={data.card3Title}
+          onChange={(e) => onChange({ card3Title: e.target.value })}
+          placeholder="Ex: REGIÃO & PAGAMENTO (ou CONDIÇÕES & ÁREA)"
+          className="w-full bg-zinc-900 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-1.5 text-xs font-bold text-zinc-100 outline-none placeholder:text-zinc-600"
+        />
+
+        <div className="flex items-center justify-between pt-1">
+          <label className="text-xs font-semibold text-zinc-300">
+            Itens Região & Pagamento (Uma linha por entrada)
+          </label>
+          <div className="flex gap-1">
             <button
               type="button"
-              onClick={() => onChange({
-                card2Title: 'SERVIÇOS DE FRETES',
-                card2Content: '<b>Fretes Urbanos e Intermunicipais</b><br><b>Mudanças Residenciais e Comerciais</b><br><b>Cargas Fechadas e Pequenos Volumes</b><br><b>Entregas e Coletas Rápidas no Dia</b>'
-              })}
-              className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded transition-colors"
+              onClick={() => insertHtmlTag('card3Content', '<b>', '</b>')}
+              className="px-1.5 py-0.5 text-[10px] bg-zinc-800 hover:bg-zinc-700 rounded text-zinc-300 font-bold"
             >
-              Fretes & Mudanças
+              &lt;b&gt;negrito&lt;/b&gt;
             </button>
             <button
               type="button"
-              onClick={() => onChange({
-                card2Title: 'SERVIÇOS DE TRANSPORTES',
-                card2Content: '<b>Coletas e Entregas Comerciais</b><br><b>Cargas Fracionadas e Dedicadas</b><br><b>Distribuição de Mercadorias</b><br><b>Viagens para Todo o Estado</b>'
-              })}
-              className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded transition-colors"
+              onClick={() => insertHtmlTag('card3Content', '<br>')}
+              className="px-1.5 py-0.5 text-[10px] bg-zinc-800 hover:bg-zinc-700 rounded text-zinc-300"
             >
-              Comercial & Cargas
+              &lt;br&gt;
+            </button>
+            <button
+              type="button"
+              onClick={() => insertHtmlTag('card3Content', '<span style="color:#4ade80">', '</span>')}
+              className="px-1.5 py-0.5 text-[10px] bg-zinc-800 hover:bg-zinc-700 rounded text-emerald-400"
+            >
+              &lt;verde&gt;
             </button>
           </div>
         </div>
-
-        {/* CARD 3: REGIÃO & PAGAMENTO */}
-        <div className="bg-zinc-950/80 p-3 rounded-xl border border-zinc-800 space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-bold text-amber-300">
-              Card 3: Título Região & Pagamento
-            </label>
-            <span className="text-[10px] text-zinc-400">Card Secundário 2</span>
-          </div>
-          <input
-            type="text"
-            value={data.card3Title}
-            onChange={(e) => onChange({ card3Title: e.target.value })}
-            placeholder="Ex: REGIÃO & PAGAMENTO (ou CONDIÇÕES & ÁREA)"
-            className="w-full bg-zinc-900 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-1.5 text-xs font-bold text-zinc-100 outline-none placeholder:text-zinc-600"
-          />
-
-          <div className="flex items-center justify-between pt-1">
-            <label className="text-xs font-semibold text-zinc-300">
-              Itens Região & Pagamento (Uma linha por entrada)
-            </label>
-            <div className="flex gap-1">
-              <button
-                type="button"
-                onClick={() => insertHtmlTag('card3Content', '<b>', '</b>')}
-                className="px-1.5 py-0.5 text-[10px] bg-zinc-800 hover:bg-zinc-700 rounded text-zinc-300 font-bold"
-              >
-                &lt;b&gt;negrito&lt;/b&gt;
-              </button>
-              <button
-                type="button"
-                onClick={() => insertHtmlTag('card3Content', '<br>')}
-                className="px-1.5 py-0.5 text-[10px] bg-zinc-800 hover:bg-zinc-700 rounded text-zinc-300"
-              >
-                &lt;br&gt;
-              </button>
-              <button
-                type="button"
-                onClick={() => insertHtmlTag('card3Content', '<span style="color:#4ade80">', '</span>')}
-                className="px-1.5 py-0.5 text-[10px] bg-zinc-800 hover:bg-zinc-700 rounded text-emerald-400"
-              >
-                &lt;verde&gt;
-              </button>
-            </div>
-          </div>
-          <textarea
-            rows={4}
-            value={data.card3Content}
-            onChange={(e) => onChange({ card3Content: e.target.value })}
-            placeholder={`Exemplos reais e vendedores (1 item por linha):
+        <textarea
+          rows={4}
+          value={data.card3Content}
+          onChange={(e) => onChange({ card3Content: e.target.value })}
+          placeholder={`Exemplos reais e vendedores (1 item por linha):
 <b>Atendimento:</b> Capital, Litoral e Interior
 <b>Pagamento:</b> Pix, Cartões em até 12x e Dinheiro
 <b>Agilidade:</b> Cargas com Cuidado e Pontualidade
 <b>Orçamento:</b> Rápido e Sem Compromisso`}
-            className="w-full bg-zinc-900 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-xs font-mono text-zinc-100 outline-none resize-none leading-relaxed placeholder:text-zinc-600"
-          />
-          {/* Presets rápidos para Card 3 */}
-          <div className="flex flex-wrap gap-1.5 pt-1 items-center">
-            <span className="text-[10px] text-zinc-500 flex items-center gap-1"><Sparkles className="w-2.5 h-2.5 text-amber-400" /> Preencher com:</span>
-            <button
-              type="button"
-              onClick={() => onChange({
-                card3Title: 'REGIÃO & PAGAMENTO',
-                card3Content: '<b>Atendimento:</b> Capital, Litoral e Interior<br><b>Pagamento:</b> Pix, Cartões em até 12x e Dinheiro<br><b>Agilidade:</b> Cargas com Cuidado e Pontualidade<br><b>Orçamento:</b> Rápido e Sem Compromisso'
-              })}
-              className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded transition-colors"
-            >
-              Completo Pix/Cartão
-            </button>
-            <button
-              type="button"
-              onClick={() => onChange({
-                card3Title: 'COBERTURA & CONDIÇÕES',
-                card3Content: '<b>Região:</b> Grande SP, Vale do Paraíba e Litoral<br><b>Facilidade:</b> Parcelamos no Cartão de Crédito<br><b>Segurança:</b> Caminhão Rastreado e Seguro<br><b>Desconto:</b> 10% de Desconto para Pagamento via Pix'
-              })}
-              className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded transition-colors"
-            >
-              Com Desconto Pix
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* 5. FOTO ORIGINAL DO CAMINHÃO */}
-      <div className="space-y-3 border-b border-zinc-800 pb-5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-amber-400 font-bold text-base">
-            <Truck className="w-5 h-5" />
-            <span>Foto Original do Caminhão</span>
-          </div>
+          className="w-full bg-zinc-900 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-xs font-mono text-zinc-100 outline-none resize-none leading-relaxed placeholder:text-zinc-600"
+        />
+        {/* Presets rápidos para Card 3 */}
+        <div className="flex flex-wrap gap-1.5 pt-1 items-center">
+          <span className="text-[10px] text-zinc-500 flex items-center gap-1"><Sparkles className="w-2.5 h-2.5 text-amber-400" /> Preencher com:</span>
           <button
             type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-400 hover:bg-amber-300 text-zinc-950 text-xs font-bold rounded-lg transition-colors cursor-pointer"
+            onClick={() => onChange({
+              card3Title: 'REGIÃO & PAGAMENTO',
+              card3Content: '<b>Atendimento:</b> Capital, Litoral e Interior<br><b>Pagamento:</b> Pix, Cartões em até 12x e Dinheiro<br><b>Agilidade:</b> Cargas com Cuidado e Pontualidade<br><b>Orçamento:</b> Rápido e Sem Compromisso'
+            })}
+            className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded transition-colors"
           >
-            <Upload className="w-4 h-4" />
-            <span>Enviar Foto Própria</span>
+            Completo Pix/Cartão
+          </button>
+          <button
+            type="button"
+            onClick={() => onChange({
+              card3Title: 'COBERTURA & CONDIÇÕES',
+              card3Content: '<b>Região:</b> Grande SP, Vale do Paraíba e Litoral<br><b>Facilidade:</b> Parcelamos no Cartão de Crédito<br><b>Segurança:</b> Caminhão Rastreado e Seguro<br><b>Desconto:</b> 10% de Desconto para Pagamento via Pix'
+            })}
+            className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded transition-colors"
+          >
+            Com Desconto Pix
           </button>
         </div>
+      </div>
+    </div>
+  ), [data.card2Title, data.card2Content, data.card3Title, data.card3Content, onChange]);
 
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={handleFileUpload}
-        />
+  const renderPhoto = useCallback(() => (
+    <div className="space-y-3 border-b border-zinc-800 pb-5">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-amber-400 font-bold text-base">
+          <Truck className="w-5 h-5" />
+          <span>Foto do Caminhão & Posicionamento</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-400 hover:bg-amber-300 text-zinc-950 text-xs font-bold rounded-lg transition-colors cursor-pointer"
+        >
+          <Upload className="w-4 h-4" />
+          <span>Enviar Foto</span>
+        </button>
+      </div>
 
-        {/* Presets de Foto */}
-        <div className="grid grid-cols-3 gap-2">
-          {TRUCK_PRESETS.map((preset) => (
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileUpload}
+      />
+
+      {/* Presets de Foto */}
+      <div className="grid grid-cols-3 gap-2">
+        {TRUCK_PRESETS.map((preset) => (
+          <button
+            key={preset.id}
+            type="button"
+            onClick={() => onChange({ truckPhotoUrl: preset.url })}
+            className={`p-2 rounded-xl border text-left transition-all relative overflow-hidden group cursor-pointer ${
+              data.truckPhotoUrl === preset.url
+                ? 'border-amber-400 bg-amber-400/10 ring-1 ring-amber-400'
+                : 'border-zinc-800 bg-zinc-950 hover:border-zinc-700'
+            }`}
+          >
+            <div className="aspect-video w-full rounded-lg overflow-hidden mb-1.5 bg-zinc-900">
+              <img
+                src={preset.url}
+                alt={preset.name}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="text-[11px] font-bold text-zinc-200 truncate">
+              {preset.tag}
+            </div>
+            {data.truckPhotoUrl === preset.url && (
+              <div className="absolute top-1 right-1 bg-amber-400 text-zinc-950 rounded-full p-0.5 shadow">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+              </div>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* VISTAS PRÉ-DEFINIDAS DO CAMINHÃO (CONTEMPLAR CARACTERÍSTICAS) */}
+      <div className="space-y-2 pt-2">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
+            <Camera className="w-3.5 h-3.5 text-amber-400" />
+            Vista do Caminhão (contempla características)
+          </span>
+          <span className="text-[10px] text-zinc-400 font-medium">6 opções</span>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {TRUCK_VIEW_PRESETS.map((preset) => (
             <button
               key={preset.id}
               type="button"
-              onClick={() => onChange({ truckPhotoUrl: preset.url })}
-              className={`p-2 rounded-xl border text-left transition-all relative overflow-hidden group cursor-pointer ${
-                data.truckPhotoUrl === preset.url
-                  ? 'border-amber-400 bg-amber-400/10 ring-1 ring-amber-400'
-                  : 'border-zinc-800 bg-zinc-950 hover:border-zinc-700'
+              onClick={() => handleTruckViewPresetChange(preset.id)}
+              className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                data.truckViewPreset === preset.id
+                  ? 'border-amber-400 ring-2 ring-amber-400/40 bg-zinc-800 font-bold'
+                  : 'border-zinc-800 bg-zinc-950 hover:border-zinc-700 text-zinc-300'
               }`}
             >
-              <div className="aspect-video w-full rounded-lg overflow-hidden mb-1.5 bg-zinc-900">
-                <img
-                  src={preset.url}
-                  alt={preset.name}
-                  className="w-full h-full object-cover"
-                />
+              <div className="text-sm font-black flex items-center gap-1.5">
+                <span>{preset.icon}</span>
+                <span>{preset.name}</span>
               </div>
-              <div className="text-[11px] font-bold text-zinc-200 truncate">
-                {preset.tag}
-              </div>
-              {data.truckPhotoUrl === preset.url && (
-                <div className="absolute top-1 right-1 bg-amber-400 text-zinc-950 rounded-full p-0.5 shadow">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
+              {preset.id === 'curve-mountain' && (
+                <div className="text-[9px] text-amber-400 font-medium mt-1">
+                  ★ Mostra tamanho do baú, altura e capacidade na subida
                 </div>
               )}
             </button>
@@ -589,218 +685,456 @@ export function FlyerEditor({ data, onChange }: FlyerEditorProps) {
         </div>
       </div>
 
-      {/* 6. TÍTULO, CABEÇALHO & RODAPÉ */}
-      <div className="space-y-3 border-b border-zinc-800 pb-5">
-        <div className="flex items-center gap-2 text-amber-400 font-bold text-base">
-          <Type className="w-5 h-5" />
-          <span>Cabeçalho e Rodapé</span>
+      {/* CONTROLES DE POSIÇÃO DENTRO DO CARD */}
+      <div className="space-y-3 pt-2 bg-zinc-950/60 rounded-xl p-3 border border-zinc-800">
+        <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
+          <Move className="w-4 h-4" />
+          <span>Ajuste de Posição & Zoom da Imagem</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-zinc-300 mb-1">
-              Título do Panfleto (Aceita HTML)
+        {/* Posição Horizontal (X) */}
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
+              <ArrowLeftRight className="w-3.5 h-3.5 text-amber-400" />
+              Posição Horizontal
             </label>
-            <input
-              type="text"
-              value={data.title}
-              onChange={(e) => onChange({ title: e.target.value })}
-              placeholder="Ex: FRETES E MUDANÇAS (ou DISK FRETES 24H)"
-              className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-sm text-zinc-100 font-bold outline-none placeholder:text-zinc-600"
-            />
-            {/* Sugestões rápidas de título */}
-            <div className="flex flex-wrap gap-1.5 mt-1.5 items-center">
-              <span className="text-[10px] text-zinc-500 flex items-center gap-1"><Sparkles className="w-2.5 h-2.5 text-amber-400" /> Sugestões:</span>
-              {[
-                'FRETES EM GERAL',
-                'FRETES & MUDANÇAS',
-                'DISK FRETES 24H',
-                'TRANSPORTE RÁPIDO'
-              ].map((text) => (
-                <button
-                  key={text}
-                  type="button"
-                  onClick={() => onChange({ title: text })}
-                  className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded transition-colors"
-                >
-                  {text}
-                </button>
-              ))}
-            </div>
+            <span className="text-[10px] text-zinc-400 font-mono">{data.imagePosition?.x ?? 0}%</span>
           </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-zinc-300 mb-1">
-              Subtítulo do Topo
-            </label>
-            <input
-              type="text"
-              value={data.subtitle}
-              onChange={(e) => onChange({ subtitle: e.target.value })}
-              placeholder="Ex: TRANSPORTE RÁPIDO, SEGURO E COM PREÇO JUSTO"
-              className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-xs text-zinc-100 outline-none placeholder:text-zinc-600"
-            />
-            {/* Sugestões rápidas de subtítulo */}
-            <div className="flex flex-wrap gap-1.5 mt-1.5 items-center">
-              <span className="text-[10px] text-zinc-500 flex items-center gap-1"><Sparkles className="w-2.5 h-2.5 text-amber-400" /> Sugestões:</span>
-              {[
-                'TRANSPORTE RÁPIDO E SEGURO',
-                'ATENDIMENTO 24H • PREÇO JUSTO',
-                'LIGOU, CHEGOU NO MESMO DIA'
-              ].map((text) => (
-                <button
-                  key={text}
-                  type="button"
-                  onClick={() => onChange({ subtitle: text })}
-                  className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded transition-colors"
-                >
-                  {text}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-zinc-300 mb-1">
-              Nome do Motorista / Empresa
-            </label>
-            <input
-              type="text"
-              value={data.driverName}
-              onChange={(e) => onChange({ driverName: e.target.value })}
-              placeholder="Ex: Carlos Fretes Express (ou TransSilva & Cia)"
-              className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-600"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-zinc-300 mb-1">
-              Tipo do Veículo (Badge na Foto)
-            </label>
-            <input
-              type="text"
-              value={data.vehicleType}
-              onChange={(e) => onChange({ vehicleType: e.target.value })}
-              placeholder="Ex: CAMINHÃO BAÚ FECHADO 3/4 (ou HR / IVECO)"
-              className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-600"
-            />
-            {/* Sugestões rápidas de veículo */}
-            <div className="flex flex-wrap gap-1.5 mt-1.5 items-center">
-              <span className="text-[10px] text-zinc-500 flex items-center gap-1"><Sparkles className="w-2.5 h-2.5 text-amber-400" /> Sugestões:</span>
-              {[
-                'CAMINHÃO BAÚ FECHADO',
-                'CAMINHÃO 3/4 CARROCERIA',
-                'HR / IVECO DAILY BAÚ',
-                'CAMINHÃO TOCO'
-              ].map((text) => (
-                <button
-                  key={text}
-                  type="button"
-                  onClick={() => onChange({ vehicleType: text })}
-                  className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded transition-colors"
-                >
-                  {text}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-zinc-300 mb-1">
-            Texto do Rodapé
-          </label>
           <input
-            type="text"
-            value={data.footerText}
-            onChange={(e) => onChange({ footerText: e.target.value })}
-            placeholder="Ex: FRETES COM SEGURANÇA E CONFIANÇA • PEÇA SEU ORÇAMENTO AGORA!"
-            className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-xs text-zinc-100 outline-none placeholder:text-zinc-600"
+            type="range"
+            min={-50}
+            max={50}
+            step={1}
+            value={data.imagePosition?.x ?? 0}
+            onChange={(e) => handleImagePositionChange('x', Number(e.target.value))}
+            className="w-full accent-amber-400"
           />
-          {/* Sugestões rápidas de rodapé */}
-          <div className="flex flex-wrap gap-1.5 mt-1.5 items-center">
-            <span className="text-[10px] text-zinc-500 flex items-center gap-1"><Sparkles className="w-2.5 h-2.5 text-amber-400" /> Sugestões:</span>
-            {[
-              'FRETES COM SEGURANÇA E CONFIANÇA • PEÇA SEU ORÇAMENTO AGORA!',
-              'QUALIDADE, PONTUALIDADE E O MELHOR PREÇO DA REGIÃO!',
-              'LIGOU, CHEGOU • SUA CARGA EM BOAS MÃOS!'
-            ].map((text) => (
-              <button
-                key={text}
-                type="button"
-                onClick={() => onChange({ footerText: text })}
-                className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded transition-colors"
-              >
-                {text}
-              </button>
-            ))}
-          </div>
         </div>
+
+        {/* Posição Vertical (Y) */}
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
+              <ArrowUpDown className="w-3.5 h-3.5 text-amber-400" />
+              Posição Vertical
+            </label>
+            <span className="text-[10px] text-zinc-400 font-mono">{data.imagePosition?.y ?? 0}%</span>
+          </div>
+          <input
+            type="range"
+            min={-50}
+            max={50}
+            step={1}
+            value={data.imagePosition?.y ?? 0}
+            onChange={(e) => handleImagePositionChange('y', Number(e.target.value))}
+            className="w-full accent-amber-400"
+          />
+        </div>
+
+        {/* Zoom / Escala */}
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
+              <Expand className="w-3.5 h-3.5 text-amber-400" />
+              Zoom da Imagem
+            </label>
+            <span className="text-[10px] text-zinc-400 font-mono">{((data.imagePosition?.scale ?? 1) * 100).toFixed(0)}%</span>
+          </div>
+          <input
+            type="range"
+            min={0.5}
+            max={3}
+            step={0.05}
+            value={data.imagePosition?.scale ?? 1}
+            onChange={(e) => handleImagePositionChange('scale', Number(e.target.value))}
+            className="w-full accent-amber-400"
+          />
+        </div>
+
+        {/* Rotação */}
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
+              <RotateCw className="w-3.5 h-3.5 text-amber-400" />
+              Rotação
+            </label>
+            <span className="text-[10px] text-zinc-400 font-mono">{data.imagePosition?.rotation ?? 0}°</span>
+          </div>
+          <input
+            type="range"
+            min={-45}
+            max={45}
+            step={1}
+            value={data.imagePosition?.rotation ?? 0}
+            onChange={(e) => handleImagePositionChange('rotation', Number(e.target.value))}
+            className="w-full accent-amber-400"
+          />
+        </div>
+
+        {/* Botão de reset */}
+        <button
+          type="button"
+          onClick={() => onChange({ imagePosition: DEFAULT_IMAGE_POSITION })}
+          className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold rounded-lg transition-colors cursor-pointer"
+        >
+          <RefreshCw className="w-3.5 h-3.5" />
+          <span>Resetar Posição & Zoom</span>
+        </button>
       </div>
 
-      {/* 7. FORMATO DE IMPRESSÃO & DIVULGAÇÃO */}
+      {/* Badge do Veículo */}
+      <div>
+        <label className="block text-xs font-semibold text-zinc-300 mb-1">
+          Tipo do Veículo (Badge na Foto)
+        </label>
+        <input
+          type="text"
+          value={data.vehicleType}
+          onChange={(e) => onChange({ vehicleType: e.target.value })}
+          placeholder="Ex: CAMINHÃO BAÚ FECHADO 3/4 (ou HR / IVECO)"
+          className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-600"
+        />
+        {/* Sugestões rápidas de veículo */}
+        <div className="flex flex-wrap gap-1.5 mt-1.5 items-center">
+          <span className="text-[10px] text-zinc-500 flex items-center gap-1"><Sparkles className="w-2.5 h-2.5 text-amber-400" /> Sugestões:</span>
+          {[
+            'CAMINHÃO BAÚ FECHADO',
+            'CAMINHÃO 3/4 CARROCERIA',
+            'HR / IVECO DAILY BAÚ',
+            'CAMINHÃO TOCO'
+          ].map((text) => (
+            <button
+              key={text}
+              type="button"
+              onClick={() => onChange({ vehicleType: text })}
+              className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded transition-colors"
+            >
+              {text}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  ), [data.truckPhotoUrl, data.truckViewPreset, data.imagePosition, data.vehicleType, onChange]);
+
+  const renderHeaderFooter = useCallback((mode: 'header' | 'footer' | 'both' = 'both') => {
+    const showHeader = mode === 'header' || mode === 'both';
+    const showFooter = mode === 'footer' || mode === 'both';
+
+    return (
+      <div className="space-y-3 border-b border-zinc-800 pb-5">
+        {showHeader && (
+          <>
+            <div className="flex items-center gap-2 text-amber-400 font-bold text-base">
+              <Type className="w-5 h-5" />
+              <span>Cabeçalho do Panfleto</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-zinc-300 mb-1">
+                  Título do Panfleto (Aceita HTML)
+                </label>
+                <input
+                  type="text"
+                  value={data.title}
+                  onChange={(e) => onChange({ title: e.target.value })}
+                  placeholder="Ex: FRETES E MUDANÇAS (ou DISK FRETES 24H)"
+                  className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-sm text-zinc-100 font-bold outline-none placeholder:text-zinc-600"
+                />
+                {/* Sugestões rápidas de título */}
+                <div className="flex flex-wrap gap-1.5 mt-1.5 items-center">
+                  <span className="text-[10px] text-zinc-500 flex items-center gap-1"><Sparkles className="w-2.5 h-2.5 text-amber-400" /> Sugestões:</span>
+                  {[
+                    'FRETES EM GERAL',
+                    'FRETES & MUDANÇAS',
+                    'DISK FRETES 24H',
+                    'TRANSPORTE RÁPIDO'
+                  ].map((text) => (
+                    <button
+                      key={text}
+                      type="button"
+                      onClick={() => onChange({ title: text })}
+                      className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded transition-colors"
+                    >
+                      {text}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-300 mb-1">
+                  Subtítulo do Topo
+                </label>
+                <input
+                  type="text"
+                  value={data.subtitle}
+                  onChange={(e) => onChange({ subtitle: e.target.value })}
+                  placeholder="Ex: TRANSPORTE RÁPIDO, SEGURO E COM PREÇO JUSTO"
+                  className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-xs text-zinc-100 outline-none placeholder:text-zinc-600"
+                />
+                {/* Sugestões rápidas de subtítulo */}
+                <div className="flex flex-wrap gap-1.5 mt-1.5 items-center">
+                  <span className="text-[10px] text-zinc-500 flex items-center gap-1"><Sparkles className="w-2.5 h-2.5 text-amber-400" /> Sugestões:</span>
+                  {[
+                    'TRANSPORTE RÁPIDO E SEGURO',
+                    'ATENDIMENTO 24H • PREÇO JUSTO',
+                    'LIGOU, CHEGOU NO MESMO DIA'
+                  ].map((text) => (
+                    <button
+                      key={text}
+                      type="button"
+                      onClick={() => onChange({ subtitle: text })}
+                      className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded transition-colors"
+                    >
+                      {text}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-zinc-300 mb-1">
+                Nome do Motorista / Empresa
+              </label>
+              <input
+                type="text"
+                value={data.driverName}
+                onChange={(e) => onChange({ driverName: e.target.value })}
+                placeholder="Ex: Carlos Fretes Express (ou TransSilva & Cia)"
+                className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-600"
+              />
+            </div>
+          </>
+        )}
+
+        {showFooter && (
+          <>
+            {!showHeader && (
+              <div className="flex items-center gap-2 text-amber-400 font-bold text-base">
+                <FileText className="w-5 h-5" />
+                <span>Rodapé do Panfleto</span>
+              </div>
+            )}
+            <div>
+              <label className="block text-xs font-semibold text-zinc-300 mb-1">
+                Texto do Rodapé
+              </label>
+              <input
+                type="text"
+                value={data.footerText}
+                onChange={(e) => onChange({ footerText: e.target.value })}
+                placeholder="Ex: FRETES COM SEGURANÇA E CONFIANÇA • PEÇA SEU ORÇAMENTO AGORA!"
+                className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-xs text-zinc-100 outline-none placeholder:text-zinc-600"
+              />
+              {/* Sugestões rápidas de rodapé */}
+              <div className="flex flex-wrap gap-1.5 mt-1.5 items-center">
+                <span className="text-[10px] text-zinc-500 flex items-center gap-1"><Sparkles className="w-2.5 h-2.5 text-amber-400" /> Sugestões:</span>
+                {[
+                  'FRETES COM SEGURANÇA E CONFIANÇA • PEÇA SEU ORÇAMENTO AGORA!',
+                  'QUALIDADE, PONTUALIDADE E O MELHOR PREÇO DA REGIÃO!',
+                  'LIGOU, CHEGOU • SUA CARGA EM BOAS MÃOS!'
+                ].map((text) => (
+                  <button
+                    key={text}
+                    type="button"
+                    onClick={() => onChange({ footerText: text })}
+                    className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded transition-colors"
+                  >
+                    {text}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }, [data.title, data.subtitle, data.driverName, data.footerText, onChange]);
+
+  const renderFormats = useCallback(() => (
+    <div className="space-y-3 border-b border-zinc-800 pb-5">
+      <div className="flex items-center justify-between">
+        <label className="flex items-center gap-2 text-amber-400 font-bold text-base">
+          <Printer className="w-5 h-5" />
+          <span>Formatos de Impressão & Divulgação</span>
+        </label>
+        <span className="text-[10px] bg-amber-400/20 text-amber-300 font-bold px-2 py-0.5 rounded">
+          Folha Dupla, 4 por Folha, 1:1, Paisagem
+        </span>
+      </div>
+      
+      <p className="text-xs text-zinc-400">
+        Escolha o formato ideal para economizar papel e tinta na impressão ou gerar para redes sociais:
+      </p>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+        {formats.map((f) => (
+          <button
+            key={f.id}
+            type="button"
+            onClick={() => onChange({ format: f.id })}
+            className={`p-3 text-left rounded-xl border transition-all cursor-pointer ${
+              data.format === f.id
+                ? 'bg-amber-400/15 text-amber-300 border-amber-400 ring-2 ring-amber-400/40 font-black shadow-md'
+                : 'bg-zinc-950 text-zinc-300 border-zinc-800 hover:border-zinc-700'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-black text-zinc-100">
+                {f.label}
+              </span>
+              <span className="text-[9px] bg-zinc-800 text-amber-400 px-1.5 py-0.5 rounded font-bold">
+                {f.iconTag}
+              </span>
+            </div>
+            <p className="text-[10px] text-zinc-400 leading-tight">
+              {f.desc}
+            </p>
+          </button>
+        ))}
+      </div>
+    </div>
+  ), [data.format, onChange]);
+
+  const renderElementOrder = useCallback(() => (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-amber-400 font-bold text-base">
+          <GripVertical className="w-5 h-5" />
+          <span>Disposição & Ordem dos Elementos</span>
+        </div>
+        <span className="text-[10px] bg-amber-400 text-zinc-950 font-black px-2 py-0.5 rounded">
+          Arrastar c/ Mouse
+        </span>
+      </div>
+
+      <ElementOrderManager
+        order={data.elementOrder || ['header', 'photo', 'card1', 'servicesCards', 'footer']}
+        onChange={(newOrder) => onChange({ elementOrder: newOrder })}
+      />
+    </div>
+  ), [data.elementOrder, onChange]);
+
+  /* ============ MAIN RETURN ============ */
+  return (
+    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 space-y-6 text-zinc-100 shadow-2xl">
+      
+      {/* SELETOR DE ELEMENTO ATIVO - Mostra apenas parâmetros do objeto selecionado */}
       <div className="space-y-3 border-b border-zinc-800 pb-5">
         <div className="flex items-center justify-between">
-          <label className="flex items-center gap-2 text-amber-400 font-bold text-base">
-            <Printer className="w-5 h-5" />
-            <span>Formatos de Impressão & Divulgação</span>
+          <div className="flex items-center gap-2 text-amber-400 font-bold text-base">
+            <Layout className="w-5 h-5" />
+            <span>Editor por Elemento Selecionado</span>
+          </div>
+          <label className="flex items-center gap-2 text-xs font-medium text-zinc-300 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showAllElements}
+              onChange={(e) => setShowAllElements(e.target.checked)}
+              className="w-4 h-4 text-amber-500 rounded border-zinc-700 bg-zinc-950 focus:ring-amber-400"
+            />
+            <span>Mostrar todos</span>
           </label>
-          <span className="text-[10px] bg-amber-400/20 text-amber-300 font-bold px-2 py-0.5 rounded">
-            Folha Dupla, 4 por Folha, 1:1, Paisagem
-          </span>
         </div>
         
-        <p className="text-xs text-zinc-400">
-          Escolha o formato ideal para economizar papel e tinta na impressão ou gerar para redes sociais:
-        </p>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-          {formats.map((f) => (
+        <div className="flex flex-wrap gap-2">
+          {ELEMENT_GROUPS.map((group) => (
             <button
-              key={f.id}
+              key={group.key}
               type="button"
-              onClick={() => onChange({ format: f.id })}
-              className={`p-3 text-left rounded-xl border transition-all cursor-pointer ${
-                data.format === f.id
-                  ? 'bg-amber-400/15 text-amber-300 border-amber-400 ring-2 ring-amber-400/40 font-black shadow-md'
-                  : 'bg-zinc-950 text-zinc-300 border-zinc-800 hover:border-zinc-700'
+              onClick={() => onSelectedElementChange(group.key)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                selectedElement === group.key
+                  ? 'bg-amber-400 text-zinc-950 shadow-md ring-2 ring-amber-400/50'
+                  : 'bg-zinc-950 text-zinc-300 border border-zinc-800 hover:border-zinc-700 hover:text-white'
               }`}
             >
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-black text-zinc-100">
-                  {f.label}
-                </span>
-                <span className="text-[9px] bg-zinc-800 text-amber-400 px-1.5 py-0.5 rounded font-bold">
-                  {f.iconTag}
-                </span>
-              </div>
-              <p className="text-[10px] text-zinc-400 leading-tight">
-                {f.desc}
-              </p>
+              {group.icon}
+              <span>{group.label}</span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* 8. ORDENAÇÃO DOS ELEMENTOS (ARRASTE COM O MOUSE) */}
-      <div className="space-y-3">
+      {/* SELETOR DE TEMPLATES/GRADES PREDEFINIDOS */}
+      <div className="space-y-3 border-b border-zinc-800 pb-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-amber-400 font-bold text-base">
-            <GripVertical className="w-5 h-5" />
-            <span>Disposição & Ordem dos Elementos</span>
+            <Grid className="w-5 h-5" />
+            <span>Templates & Grades Predefinidos</span>
           </div>
-          <span className="text-[10px] bg-amber-400 text-zinc-950 font-black px-2 py-0.5 rounded">
-            Arrastar c/ Mouse
+          <span className="text-[10px] bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded font-bold">
+            Para Panfletos & Flyers
           </span>
         </div>
-
-        <ElementOrderManager
-          order={data.elementOrder || ['header', 'photo', 'card1', 'servicesCards', 'footer']}
-          onChange={(newOrder) => onChange({ elementOrder: newOrder })}
-        />
+        <p className="text-xs text-zinc-400">
+          Escolha um layout otimizado para seu tipo de divulgação:
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {FLYER_TEMPLATES.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => handleTemplateChange(t.id)}
+              className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                data.template === t.id
+                  ? 'bg-amber-400/15 text-amber-300 border-amber-400 ring-2 ring-amber-400/40 font-black shadow-md'
+                  : 'bg-zinc-950 text-zinc-300 border-zinc-800 hover:border-zinc-700'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-black text-zinc-100 flex items-center gap-1">
+                  {t.icon} {t.name}
+                </span>
+                <span className="text-[9px] bg-zinc-800 text-amber-400 px-1.5 py-0.5 rounded font-bold">
+                  {data.template === t.id ? '✓' : ''}
+                </span>
+              </div>
+              <p className="text-[10px] text-zinc-400 leading-tight">{t.desc}</p>
+              <p className="text-[9px] text-zinc-500 mt-1 font-mono">{t.preview}</p>
+            </button>
+          ))}
+        </div>
       </div>
+
+      {/* Renderizador condicional baseado no elemento selecionado */}
+      {(() => {
+        if (showAllElements) {
+          // Render all sections (original behavior)
+          return (
+            <>
+              {renderThemes()}
+              {renderFonts()}
+              {renderCard1()}
+              {renderServicesCards()}
+              {renderPhoto()}
+              {renderHeaderFooter()}
+              {renderFormats()}
+              {renderElementOrder()}
+            </>
+          );
+        }
+
+        // Render only the selected element's section
+        switch (selectedElement) {
+          case 'header':
+            return <> {renderThemes()} {renderFonts()} {renderHeaderFooter('header')} </>;
+          case 'photo':
+            return <> {renderPhoto()} </>;
+          case 'card1':
+            return <> {renderCard1()} </>;
+          case 'servicesCards':
+            return <> {renderServicesCards()} </>;
+          case 'footer':
+            return <> {renderHeaderFooter('footer')} </>;
+          default:
+            return <> {renderThemes()} {renderFonts()} </>;
+        }
+      })()}
 
     </div>
   );

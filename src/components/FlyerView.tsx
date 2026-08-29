@@ -9,7 +9,8 @@ import {
   ShieldCheck, 
   ChevronRight, 
   GripVertical,
-  Scissors
+  Scissors,
+  Mountain
 } from 'lucide-react';
 
 interface FlyerViewProps {
@@ -17,6 +18,8 @@ interface FlyerViewProps {
   qrCodeUrl?: string;
   isGrayscalePreview?: boolean;
   onReorderElements?: (newOrder: FlyerElementKey[]) => void;
+  onSelectElement?: (key: FlyerElementKey) => void; // Seleciona objeto no editor
+  selectedElement?: FlyerElementKey | null; // Objeto atualmente selecionado (destaque)
   isSheetDuplicate?: boolean; // Se é uma cópia secundária em folha dupla/4-up
 }
 
@@ -67,7 +70,9 @@ export const SingleFlyer = forwardRef<HTMLDivElement, FlyerViewProps>(({
   data,
   qrCodeUrl,
   isGrayscalePreview = false,
-  onReorderElements
+  onReorderElements,
+  onSelectElement,
+  selectedElement
 }, ref) => {
   const [draggedKey, setDraggedKey] = useState<FlyerElementKey | null>(null);
   const [targetKey, setTargetKey] = useState<FlyerElementKey | null>(null);
@@ -116,6 +121,17 @@ export const SingleFlyer = forwardRef<HTMLDivElement, FlyerViewProps>(({
     setDraggedKey(null);
     setTargetKey(null);
   };
+
+  // Seleciona o elemento no editor ao clicar no bloco (tempo real)
+  const handleSelect = (key: FlyerElementKey) => {
+    if (onSelectElement) onSelectElement(key);
+  };
+
+  // Classes de destaque quando o elemento está selecionado
+  const selectionHighlight = (key: FlyerElementKey) =>
+    selectedElement === key
+      ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-transparent cursor-pointer'
+      : 'cursor-pointer hover:ring-1 hover:ring-amber-400/30';
 
   // Configurações de temas com modelos de fundo branco e alto contraste
   const themeStyles = {
@@ -394,9 +410,10 @@ export const SingleFlyer = forwardRef<HTMLDivElement, FlyerViewProps>(({
       onDragOver={(e) => handleDragOver(e, 'header')}
       onDrop={(e) => handleDrop(e, 'header')}
       onDragEnd={handleDragEnd}
+      onClick={() => handleSelect('header')}
       className={`group relative ${themeStyles.topBannerBg} px-3.5 py-2.5 sm:py-3.5 text-center transition-all ${
         draggedKey === 'header' ? 'opacity-30' : ''
-      } ${targetKey === 'header' ? 'ring-4 ring-amber-400' : ''}`}
+      } ${targetKey === 'header' ? 'ring-4 ring-amber-400' : ''} ${selectionHighlight('header')}`}
     >
       {onReorderElements && (
         <div className="no-print absolute top-2 right-2 opacity-0 group-hover:opacity-100 bg-black/70 text-amber-300 p-1 rounded cursor-grab active:cursor-grabbing text-[10px] flex items-center gap-1 transition-opacity">
@@ -436,11 +453,12 @@ export const SingleFlyer = forwardRef<HTMLDivElement, FlyerViewProps>(({
       onDragOver={(e) => handleDragOver(e, 'photo')}
       onDrop={(e) => handleDrop(e, 'photo')}
       onDragEnd={handleDragEnd}
+      onClick={() => handleSelect('photo')}
       className={`group relative w-full rounded-xl overflow-hidden bg-black/30 ${themeStyles.photoBorder} ${
         isLandscape || isCard ? 'min-h-[130px] max-h-[170px]' : is4Up || isDoubleA5 ? 'min-h-[130px] max-h-[180px]' : 'min-h-[170px] max-h-[260px]'
       } flex items-center justify-center transition-all ${
         draggedKey === 'photo' ? 'opacity-30' : ''
-      } ${targetKey === 'photo' ? 'ring-4 ring-amber-400' : ''}`}
+      } ${targetKey === 'photo' ? 'ring-4 ring-amber-400' : ''} ${selectionHighlight('photo')}`}
     >
       {onReorderElements && (
         <div className="no-print absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 bg-black/70 text-amber-300 p-1 rounded cursor-grab active:cursor-grabbing text-[10px] flex items-center gap-1 transition-opacity">
@@ -453,8 +471,12 @@ export const SingleFlyer = forwardRef<HTMLDivElement, FlyerViewProps>(({
         <img
           src={data.truckPhotoUrl}
           alt="Foto do Caminhão de Fretes"
-          className="w-full h-full object-cover object-center"
+          className="w-full h-full object-cover"
           crossOrigin="anonymous"
+          style={{
+            transform: `translate(${data.imagePosition?.x || 0}%, ${data.imagePosition?.y || 0}%) scale(${data.imagePosition?.scale || 1}) rotate(${data.imagePosition?.rotation || 0}deg)`,
+            transformOrigin: 'center center'
+          }}
         />
       ) : (
         <div className="p-6 text-center font-black text-base opacity-70">
@@ -468,6 +490,14 @@ export const SingleFlyer = forwardRef<HTMLDivElement, FlyerViewProps>(({
           <SafeHtml content={data.vehicleType} />
         </div>
       )}
+
+      {/* Indicador de contexto para vista "Curva na Serra" - contempla características */}
+      {data.truckViewPreset === 'curve-mountain' && (
+        <div className="absolute top-2 left-2 bg-black/70 text-amber-300 text-[10px] font-black px-2 py-0.5 rounded-lg border border-amber-400/50 shadow-lg flex items-center gap-1.5">
+          <Mountain className="w-3.5 h-3.5" />
+          <span>SUBINDO A SERRA • BAU {data.vehicleType ? 'DESTAQUE' : ''}</span>
+        </div>
+      )}
     </div>
   );
 
@@ -479,9 +509,10 @@ export const SingleFlyer = forwardRef<HTMLDivElement, FlyerViewProps>(({
       onDragOver={(e) => handleDragOver(e, 'card1')}
       onDrop={(e) => handleDrop(e, 'card1')}
       onDragEnd={handleDragEnd}
+      onClick={() => handleSelect('card1')}
       className={`group relative ${themeStyles.card1Bg} rounded-2xl p-3.5 sm:p-4.5 overflow-hidden transition-all ${
         draggedKey === 'card1' ? 'opacity-30' : ''
-      } ${targetKey === 'card1' ? 'ring-4 ring-amber-400' : ''}`}
+      } ${targetKey === 'card1' ? 'ring-4 ring-amber-400' : ''} ${selectionHighlight('card1')}`}
     >
       {onReorderElements && (
         <div className="no-print absolute top-2 right-2 opacity-0 group-hover:opacity-100 bg-black/70 text-amber-300 p-1 rounded cursor-grab active:cursor-grabbing text-[10px] flex items-center gap-1 transition-opacity">
@@ -555,9 +586,10 @@ export const SingleFlyer = forwardRef<HTMLDivElement, FlyerViewProps>(({
       onDragOver={(e) => handleDragOver(e, 'servicesCards')}
       onDrop={(e) => handleDrop(e, 'servicesCards')}
       onDragEnd={handleDragEnd}
+      onClick={() => handleSelect('servicesCards')}
       className={`group relative grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3.5 transition-all ${
         draggedKey === 'servicesCards' ? 'opacity-30' : ''
-      } ${targetKey === 'servicesCards' ? 'ring-4 ring-amber-400 rounded-xl' : ''}`}
+      } ${targetKey === 'servicesCards' ? 'ring-4 ring-amber-400 rounded-xl' : ''} ${selectionHighlight('servicesCards')}`}
     >
       {onReorderElements && (
         <div className="no-print absolute -top-3 right-2 z-10 opacity-0 group-hover:opacity-100 bg-black/70 text-amber-300 p-1 rounded cursor-grab active:cursor-grabbing text-[10px] flex items-center gap-1 transition-opacity">
@@ -615,9 +647,10 @@ export const SingleFlyer = forwardRef<HTMLDivElement, FlyerViewProps>(({
         onDragOver={(e) => handleDragOver(e, 'footer')}
         onDrop={(e) => handleDrop(e, 'footer')}
         onDragEnd={handleDragEnd}
+        onClick={() => handleSelect('footer')}
         className={`group relative ${themeStyles.footerBg} text-center py-2 px-3 text-[11px] sm:text-xs md:text-sm font-black tracking-wide transition-all ${
           draggedKey === 'footer' ? 'opacity-30' : ''
-        } ${targetKey === 'footer' ? 'ring-4 ring-amber-400' : ''}`}
+        } ${targetKey === 'footer' ? 'ring-4 ring-amber-400' : ''} ${selectionHighlight('footer')}`}
       >
         {onReorderElements && (
           <div className="no-print absolute top-1 right-2 opacity-0 group-hover:opacity-100 bg-black/70 text-amber-300 p-1 rounded cursor-grab active:cursor-grabbing text-[10px] flex items-center gap-1 transition-opacity">

@@ -15,7 +15,7 @@ import {
   cleanPhoneNumber,
   stripHtmlToWhatsApp
 } from './utils/flyerHelpers';
-import { toPng } from 'html-to-image';
+import { toPng, toSvg } from 'html-to-image';
 import { 
   Download, 
   Printer, 
@@ -30,8 +30,23 @@ import {
   Contrast, 
   GripVertical,
   Layers,
-  Scissors
+  Scissors,
+  FileImage,
+  FileCode
 } from 'lucide-react';
+
+// Export flyer as SVG vector (raster images are embedded as base64)
+async function exportAsSvg(element: HTMLElement): Promise<void> {
+  const svgDataUrl = await toSvg(element, {
+    pixelRatio: 2,
+    cacheBust: true,
+    backgroundColor: '#ffffff',
+  });
+  const link = document.createElement('a');
+  link.download = `panfleto-fretes-${Date.now()}.svg`;
+  link.href = svgDataUrl;
+  link.click();
+}
 
 export default function App() {
   const [data, setData] = useState<FlyerData>(DEFAULT_FLYER_DATA);
@@ -41,6 +56,7 @@ export default function App() {
   const [mobileTab, setMobileTab] = useState<'preview' | 'edit'>('preview');
   const [zoomScale, setZoomScale] = useState<number>(1.0);
   const [isGrayscalePreview, setIsGrayscalePreview] = useState<boolean>(false);
+  const [selectedElement, setSelectedElement] = useState<FlyerElementKey>('header');
 
   const flyerViewRef = useRef<HTMLDivElement>(null);
 
@@ -108,6 +124,19 @@ export default function App() {
     window.print();
   };
 
+  // Download flyer as SVG vector (with embedded images)
+  const handleDownloadSvg = async () => {
+    if (!flyerViewRef.current) return;
+    try {
+      setIsExporting(true);
+      await exportAsSvg(flyerViewRef.current);
+    } catch (err) {
+      console.error('Erro ao gerar SVG do panfleto:', err);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   // Copy WhatsApp broadcast text
   const handleCopyWhatsAppText = () => {
     const text = generateWhatsAppBroadcastText({
@@ -157,7 +186,17 @@ export default function App() {
               className="flex items-center gap-1.5 px-4 py-2 bg-amber-400 hover:bg-amber-300 active:bg-amber-500 text-zinc-950 font-black text-xs sm:text-sm rounded-xl shadow transition-all cursor-pointer disabled:opacity-50"
             >
               <Download className="w-4 h-4" />
-              <span>{isExporting ? 'Gerando Imagem...' : 'Baixar Imagem (PNG)'}</span>
+              <span>{isExporting ? 'Gerando Imagem...' : 'Baixar PNG'}</span>
+            </button>
+
+            <button
+              onClick={handleDownloadSvg}
+              disabled={isExporting}
+              className="flex items-center gap-1.5 px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs sm:text-sm rounded-xl border border-zinc-700 transition-colors cursor-pointer disabled:opacity-50"
+              title="Exportar como vetor SVG (com imagens embutidas)"
+            >
+              <FileCode className="w-4 h-4" />
+              <span>SVG Vetor</span>
             </button>
 
             <button
@@ -303,6 +342,8 @@ export default function App() {
                 qrCodeUrl={qrCodeUrl}
                 isGrayscalePreview={isGrayscalePreview}
                 onReorderElements={handleReorderElements}
+                onSelectElement={setSelectedElement}
+                selectedElement={selectedElement}
               />
             </div>
 
@@ -314,7 +355,17 @@ export default function App() {
                 className="flex items-center justify-center gap-1.5 px-4 py-3 bg-amber-400 hover:bg-amber-300 text-zinc-950 font-black text-xs sm:text-sm rounded-xl shadow-lg transition-colors cursor-pointer disabled:opacity-50"
               >
                 <Download className="w-4 h-4" />
-                <span>{isExporting ? 'Baixando...' : 'Salvar Imagem (PNG)'}</span>
+                <span>{isExporting ? 'Baixando...' : 'Salvar PNG'}</span>
+              </button>
+
+              <button
+                onClick={handleDownloadSvg}
+                disabled={isExporting}
+                className="flex items-center justify-center gap-1.5 px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-bold text-xs sm:text-sm rounded-xl border border-zinc-700 transition-colors cursor-pointer disabled:opacity-50"
+                title="Exportar como vetor SVG (com imagens)"
+              >
+                <FileCode className="w-4 h-4" />
+                <span>Exportar SVG</span>
               </button>
 
               <button
@@ -367,6 +418,8 @@ export default function App() {
             <FlyerEditor
               data={data}
               onChange={handleDataChange}
+              selectedElement={selectedElement}
+              onSelectedElementChange={setSelectedElement}
             />
           </section>
 

@@ -1,7 +1,23 @@
-import { FlyerData, TruckPreset } from '../types';
+import { FlyerData, TruckPreset, ImagePosition, TruckViewPreset, FlyerTemplate } from '../types';
 import truckRedBauImg from '../assets/images/caminhao_vermelho_bau_1788017348827.jpg';
 import truckBauImg from '../assets/images/caminhao_frete_original_1788017192766.jpg';
 import truckCarroceriaImg from '../assets/images/caminhao_carroceria_frete_1788017210053.jpg';
+
+export const DEFAULT_IMAGE_POSITION: ImagePosition = {
+  x: 0,
+  y: 0,
+  scale: 1,
+  rotation: 0
+};
+
+export const TRUCK_VIEW_PRESETS: { id: TruckViewPreset; name: string; position: ImagePosition; icon: string }[] = [
+  { id: 'front', name: 'Frente', position: { x: 0, y: -10, scale: 1.1, rotation: 0 }, icon: '🚛' },
+  { id: 'side', name: 'Lateral (Perfil)', position: { x: 0, y: 0, scale: 1, rotation: 0 }, icon: '🚚' },
+  { id: 'rear', name: 'Traseira', position: { x: 0, y: 10, scale: 1.1, rotation: 0 }, icon: '🔙' },
+  { id: 'curve-mountain', name: 'Curva na Serra ★', position: { x: -15, y: -20, scale: 1.3, rotation: -12 }, icon: '🏔️' },
+  { id: 'loading', name: 'Carregando', position: { x: 20, y: 5, scale: 0.9, rotation: 5 }, icon: '📦' },
+  { id: 'highway', name: 'Estrada', position: { x: 0, y: -5, scale: 1.15, rotation: 0 }, icon: '🛣️' }
+];
 
 export const TRUCK_PRESETS: TruckPreset[] = [
   {
@@ -24,6 +40,51 @@ export const TRUCK_PRESETS: TruckPreset[] = [
   }
 ];
 
+export const FLYER_TEMPLATES: { id: FlyerTemplate; name: string; desc: string; icon: string; preview: string }[] = [
+  {
+    id: 'classic',
+    name: 'Clássico Completo',
+    desc: 'Header + Foto + Contato + 2 Cards + Rodapé',
+    icon: '📋',
+    preview: 'header → photo → card1 → servicesCards → footer'
+  },
+  {
+    id: 'photo-focused',
+    name: 'Foto em Destaque',
+    desc: 'Foto grande ocupa 50% + Cards compactos',
+    icon: '📸',
+    preview: 'photo (grande) → card1 → servicesCards'
+  },
+  {
+    id: 'contact-heavy',
+    name: 'Contato Gigante',
+    desc: 'Telefone + QR Code dominam + Cards mínimos',
+    icon: '📞',
+    preview: 'card1 (gigante) → photo → servicesCards'
+  },
+  {
+    id: 'services-grid',
+    name: 'Grade de Serviços',
+    desc: '4 Cards de serviços em grid 2x2',
+    icon: '⚙️',
+    preview: 'header → photo → 4 cards grid → footer'
+  },
+  {
+    id: 'minimal',
+    name: 'Mínimo (Cartão)',
+    desc: 'Logo + Telefone + QR apenas',
+    icon: '💳',
+    preview: 'header → card1 → qr'
+  },
+  {
+    id: 'double-deck',
+    name: 'Dois Andares',
+    desc: 'Bloco superior + bloco inferior independentes',
+    icon: '🏢',
+    preview: 'header+photo+card1 | servicesCards+footer'
+  }
+];
+
 export const DEFAULT_FLYER_DATA: FlyerData = {
   title: 'FRETES EM GERAL',
   subtitle: 'TRANSPORTE RÁPIDO, SEGURO E COM PREÇO JUSTO',
@@ -32,6 +93,8 @@ export const DEFAULT_FLYER_DATA: FlyerData = {
   phoneSecondary: '(11) 91234-5678',
   vehicleType: 'CAMINHÃO BAÚ FECHADO 3/4',
   truckPhotoUrl: truckRedBauImg,
+  imagePosition: DEFAULT_IMAGE_POSITION,
+  truckViewPreset: 'side',
   
   // Card 1 (Destaque Principal): Contato & Chamada Imediata
   card1Title: 'LIGUE OU CHAME NO WHATSAPP',
@@ -50,5 +113,6 @@ export const DEFAULT_FLYER_DATA: FlyerData = {
   theme: 'clean-white',
   format: 'vertical',
   fontFamily: 'anton',
-  elementOrder: ['header', 'photo', 'card1', 'servicesCards', 'footer']
+  elementOrder: ['header', 'photo', 'card1', 'servicesCards', 'footer'],
+  template: 'classic'
 };

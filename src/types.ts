@@ -34,6 +34,29 @@ export type ImposingFont =
   | 'montserrat' 
   | 'rubik';
 
+export type FlyerTemplate = 
+  | 'classic'         // Clássico: Header + Foto + Card1 + 2 Cards + Footer
+  | 'photo-focused'   // Foto em destaque + Cards compactos
+  | 'contact-heavy'   // Contato gigante + QR + Cards mínimos
+  | 'services-grid'   // Grid de serviços (3-4 cards)
+  | 'minimal'         // Mínimo: Logo + Telefone + QR
+  | 'double-deck';    // Dois andares (cima/baixo)
+
+export interface ImagePosition {
+  x: number;      // -100 to 100 (percentage)
+  y: number;      // -100 to 100 (percentage)
+  scale: number;  // 0.5 to 3.0
+  rotation: number; // -180 to 180 (degrees)
+}
+
+export type TruckViewPreset = 
+  | 'front'           // Frente do caminhão
+  | 'side'            // Lateral (perfil)
+  | 'rear'            // Traseira
+  | 'curve-mountain'  // Curva subindo serra (mostra bau, altura)
+  | 'loading'         // Carregando/Descarregando
+  | 'highway';        // Em movimento na estrada
+
 export interface FlyerData {
   title: string;
   subtitle: string;
@@ -42,6 +65,8 @@ export interface FlyerData {
   phoneSecondary: string;
   vehicleType: string;
   truckPhotoUrl: string;
+  imagePosition: ImagePosition;
+  truckViewPreset: TruckViewPreset;
   
   // 1 Card em Destaque Principal + 2 Cards a seguir (suportam HTML)
   card1Title: string;
@@ -57,6 +82,7 @@ export interface FlyerData {
   format: FlyerFormat;
   fontFamily: ImposingFont;
   elementOrder: FlyerElementKey[]; // Ordem dos blocos com arrastar e soltar
+  template: FlyerTemplate; // Template/grid predefinido
 }
 
 export interface TruckPreset {
