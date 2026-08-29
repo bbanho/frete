@@ -1,22 +1,32 @@
-import React, { forwardRef } from 'react';
-import { FlyerData } from '../types';
+import React, { forwardRef, useState } from 'react';
+import { FlyerData, FlyerElementKey } from '../types';
 import { SafeHtml } from './SafeHtml';
-import { Phone, Truck, MapPin, CreditCard, ShieldCheck, ChevronRight, Check } from 'lucide-react';
+import { 
+  Phone, 
+  Truck, 
+  MapPin, 
+  CreditCard, 
+  ShieldCheck, 
+  ChevronRight, 
+  GripVertical,
+  Scissors
+} from 'lucide-react';
 
 interface FlyerViewProps {
   data: FlyerData;
   qrCodeUrl?: string;
   isGrayscalePreview?: boolean;
+  onReorderElements?: (newOrder: FlyerElementKey[]) => void;
+  isSheetDuplicate?: boolean; // Se é uma cópia secundária em folha dupla/4-up
 }
 
 /**
  * Componente que renderiza cada entrada de texto da lista em exatamente UMA LINHA,
  * ajustando tamanho e espaçamento para não quebrar linha.
  */
-function CardListItems({ content }: { content: string }) {
+function CardListItems({ content, isCompact = false }: { content: string; isCompact?: boolean }) {
   if (!content) return null;
 
-  // Quebra por <br>, <br/> ou nova linha
   const items = content
     .split(/<br\s*\/?>|\n/i)
     .map((item) => item.trim())
@@ -25,9 +35,8 @@ function CardListItems({ content }: { content: string }) {
   if (items.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-1.5 w-full py-0.5">
+    <div className={`flex flex-col ${isCompact ? 'gap-0.5' : 'gap-1.5'} w-full py-0.5`}>
       {items.map((item, idx) => {
-        // Remove marcadores repetidos se o usuário digitou
         let cleaned = item;
         if (cleaned.startsWith('•') || cleaned.startsWith('-') || cleaned.startsWith('✔') || cleaned.startsWith('*')) {
           cleaned = cleaned.substring(1).trim();
@@ -36,7 +45,9 @@ function CardListItems({ content }: { content: string }) {
         return (
           <div
             key={idx}
-            className="flex items-center gap-1.5 w-full min-w-0 text-[11px] sm:text-[12px] md:text-[12.5px] leading-tight font-medium"
+            className={`flex items-center gap-1.5 w-full min-w-0 ${
+              isCompact ? 'text-[9.5px] sm:text-[10.5px]' : 'text-[11px] sm:text-[12px] md:text-[12.5px]'
+            } leading-tight font-medium`}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70 flex-shrink-0" />
             <div className="truncate whitespace-nowrap overflow-hidden flex-1">
@@ -49,10 +60,65 @@ function CardListItems({ content }: { content: string }) {
   );
 }
 
-export const FlyerView = forwardRef<HTMLDivElement, FlyerViewProps>(({ data, qrCodeUrl, isGrayscalePreview = false }, ref) => {
-  // Configurações de temas com múltiplos modelos de fundo branco e alta legibilidade
+/**
+ * Componente base de um único panfleto (Single Flyer), com suporte a reordenação por drag and drop
+ */
+export const SingleFlyer = forwardRef<HTMLDivElement, FlyerViewProps>(({
+  data,
+  qrCodeUrl,
+  isGrayscalePreview = false,
+  onReorderElements
+}, ref) => {
+  const [draggedKey, setDraggedKey] = useState<FlyerElementKey | null>(null);
+  const [targetKey, setTargetKey] = useState<FlyerElementKey | null>(null);
+
+  // Ordem dos elementos
+  const currentOrder: FlyerElementKey[] = data.elementOrder && data.elementOrder.length === 5
+    ? data.elementOrder
+    : ['header', 'photo', 'card1', 'servicesCards', 'footer'];
+
+  // Handlers para arrastar com o mouse diretamente no panfleto
+  const handleDragStart = (e: React.DragEvent, key: FlyerElementKey) => {
+    e.dataTransfer.setData('text/plain', key);
+    setDraggedKey(key);
+  };
+
+  const handleDragOver = (e: React.DragEvent, key: FlyerElementKey) => {
+    e.preventDefault();
+    if (targetKey !== key) {
+      setTargetKey(key);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent, dropKey: FlyerElementKey) => {
+    e.preventDefault();
+    if (!draggedKey || draggedKey === dropKey || !onReorderElements) {
+      setDraggedKey(null);
+      setTargetKey(null);
+      return;
+    }
+
+    const newOrder = [...currentOrder];
+    const draggedIdx = newOrder.indexOf(draggedKey);
+    const targetIdx = newOrder.indexOf(dropKey);
+
+    if (draggedIdx !== -1 && targetIdx !== -1) {
+      const [moved] = newOrder.splice(draggedIdx, 1);
+      newOrder.splice(targetIdx, 0, moved);
+      onReorderElements(newOrder);
+    }
+
+    setDraggedKey(null);
+    setTargetKey(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedKey(null);
+    setTargetKey(null);
+  };
+
+  // Configurações de temas com modelos de fundo branco e alto contraste
   const themeStyles = {
-    // === MODELOS COM FUNDO BRANCO ===
     'clean-white': {
       bg: 'bg-white',
       text: 'text-zinc-950',
@@ -173,8 +239,6 @@ export const FlyerView = forwardRef<HTMLDivElement, FlyerViewProps>(({ data, qrC
       footerBg: 'bg-black text-white border-t-4 border-black',
       photoBorder: 'border-4 border-black shadow-none'
     },
-
-    // === MODELOS COLORIDOS CLÁSSICOS ===
     'yellow-black': {
       bg: 'bg-amber-400',
       text: 'text-zinc-950',
@@ -296,7 +360,6 @@ export const FlyerView = forwardRef<HTMLDivElement, FlyerViewProps>(({ data, qrC
     photoBorder: 'border-4 border-zinc-950 shadow-md'
   };
 
-  // Font family mapping for imposing typography
   const fontClass = {
     anton: 'font-anton',
     bebas: 'font-bebas tracking-wider',
@@ -306,178 +369,394 @@ export const FlyerView = forwardRef<HTMLDivElement, FlyerViewProps>(({ data, qrC
     rubik: 'font-rubik tracking-tight'
   }[data.fontFamily] || 'font-anton';
 
-  // Format classes (ampliado para ocupar mais espaço na tela)
-  const formatClasses = {
-    vertical: 'w-full max-w-[600px] min-h-[860px]',
-    square: 'w-full max-w-[600px] aspect-square',
-    card: 'w-full max-w-[600px] min-h-[400px]'
+  // Dimensionamento por formato
+  const isLandscape = data.format === 'landscape';
+  const isSquare = data.format === 'square';
+  const isCard = data.format === 'card';
+  const isDoubleA5 = data.format === 'double-a5';
+  const is4Up = data.format === '4-up';
+
+  const formatContainerClass = {
+    vertical: 'w-full max-w-[620px] min-h-[880px]',
+    'double-a5': 'w-full min-h-[440px]',
+    '4-up': 'w-full min-h-[380px]',
+    square: 'w-full max-w-[620px] aspect-square',
+    landscape: 'w-full max-w-[860px] min-h-[520px]',
+    card: 'w-full max-w-[620px] min-h-[380px]'
   }[data.format];
+
+  // Renderizadores de cada um dos 5 blocos do panfleto
+  const renderHeader = () => (
+    <div
+      key="header"
+      draggable={!!onReorderElements}
+      onDragStart={(e) => handleDragStart(e, 'header')}
+      onDragOver={(e) => handleDragOver(e, 'header')}
+      onDrop={(e) => handleDrop(e, 'header')}
+      onDragEnd={handleDragEnd}
+      className={`group relative ${themeStyles.topBannerBg} px-3.5 py-2.5 sm:py-3.5 text-center transition-all ${
+        draggedKey === 'header' ? 'opacity-30' : ''
+      } ${targetKey === 'header' ? 'ring-4 ring-amber-400' : ''}`}
+    >
+      {onReorderElements && (
+        <div className="no-print absolute top-2 right-2 opacity-0 group-hover:opacity-100 bg-black/70 text-amber-300 p-1 rounded cursor-grab active:cursor-grabbing text-[10px] flex items-center gap-1 transition-opacity">
+          <GripVertical className="w-3.5 h-3.5" />
+          <span>Arrastar Bloco</span>
+        </div>
+      )}
+
+      <div className={`${
+        isLandscape || isCard ? 'text-2xl sm:text-3xl' : 'text-3xl sm:text-4xl md:text-5xl'
+      } font-black uppercase leading-tight ${fontClass}`}>
+        <SafeHtml content={data.title || 'FRETES EM GERAL'} />
+      </div>
+      
+      {data.subtitle && (
+        <div className={`text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-wider mt-1 ${themeStyles.topBannerSub}`}>
+          <SafeHtml content={data.subtitle} />
+        </div>
+      )}
+      
+      {data.driverName && (
+        <div className="mt-1.5 inline-flex items-center justify-center">
+          <div className={`text-[11px] sm:text-xs font-black px-3 py-0.5 rounded-full shadow-sm flex items-center gap-1.5 ${themeStyles.driverBadge}`}>
+            <Truck className="w-3.5 h-3.5" />
+            <SafeHtml content={data.driverName} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderPhoto = () => (
+    <div
+      key="photo"
+      draggable={!!onReorderElements}
+      onDragStart={(e) => handleDragStart(e, 'photo')}
+      onDragOver={(e) => handleDragOver(e, 'photo')}
+      onDrop={(e) => handleDrop(e, 'photo')}
+      onDragEnd={handleDragEnd}
+      className={`group relative w-full rounded-xl overflow-hidden bg-black/30 ${themeStyles.photoBorder} ${
+        isLandscape || isCard ? 'min-h-[130px] max-h-[170px]' : is4Up || isDoubleA5 ? 'min-h-[130px] max-h-[180px]' : 'min-h-[170px] max-h-[260px]'
+      } flex items-center justify-center transition-all ${
+        draggedKey === 'photo' ? 'opacity-30' : ''
+      } ${targetKey === 'photo' ? 'ring-4 ring-amber-400' : ''}`}
+    >
+      {onReorderElements && (
+        <div className="no-print absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 bg-black/70 text-amber-300 p-1 rounded cursor-grab active:cursor-grabbing text-[10px] flex items-center gap-1 transition-opacity">
+          <GripVertical className="w-3.5 h-3.5" />
+          <span>Arrastar Foto</span>
+        </div>
+      )}
+
+      {data.truckPhotoUrl ? (
+        <img
+          src={data.truckPhotoUrl}
+          alt="Foto do Caminhão de Fretes"
+          className="w-full h-full object-cover object-center"
+          crossOrigin="anonymous"
+        />
+      ) : (
+        <div className="p-6 text-center font-black text-base opacity-70">
+          [ FOTO DO CAMINHÃO ]
+        </div>
+      )}
+
+      {data.vehicleType && (
+        <div className="absolute bottom-2 left-2 bg-black text-white text-[11px] sm:text-xs md:text-sm font-black px-2.5 py-0.5 rounded-lg border-2 border-white shadow-xl flex items-center gap-1.5">
+          <Truck className="w-3.5 h-3.5 text-amber-300" />
+          <SafeHtml content={data.vehicleType} />
+        </div>
+      )}
+    </div>
+  );
+
+  const renderCard1 = () => (
+    <div
+      key="card1"
+      draggable={!!onReorderElements}
+      onDragStart={(e) => handleDragStart(e, 'card1')}
+      onDragOver={(e) => handleDragOver(e, 'card1')}
+      onDrop={(e) => handleDrop(e, 'card1')}
+      onDragEnd={handleDragEnd}
+      className={`group relative ${themeStyles.card1Bg} rounded-2xl p-3.5 sm:p-4.5 overflow-hidden transition-all ${
+        draggedKey === 'card1' ? 'opacity-30' : ''
+      } ${targetKey === 'card1' ? 'ring-4 ring-amber-400' : ''}`}
+    >
+      {onReorderElements && (
+        <div className="no-print absolute top-2 right-2 opacity-0 group-hover:opacity-100 bg-black/70 text-amber-300 p-1 rounded cursor-grab active:cursor-grabbing text-[10px] flex items-center gap-1 transition-opacity">
+          <GripVertical className="w-3.5 h-3.5" />
+          <span>Arrastar Card</span>
+        </div>
+      )}
+
+      {/* Header do Card 1: Badge Moderno com Ícone */}
+      <div className="flex items-center justify-between mb-2.5 border-b-2 border-white/15 pb-2">
+        <div className={`inline-flex items-center gap-1.5 px-3 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-black uppercase tracking-wider shadow-sm ${themeStyles.card1Badge}`}>
+          <Phone className="w-3 h-3" />
+          <SafeHtml content={data.card1Title || 'LIGUE OU CHAME NO WHATSAPP'} />
+        </div>
+
+        <div className="hidden sm:flex items-center gap-1.5 text-[10px] sm:text-[11px] font-black uppercase tracking-tight opacity-90">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span>Atendimento 24h</span>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between gap-2.5 sm:gap-4">
+        {/* Números de Telefone Grandes */}
+        <div className="flex-1 text-center sm:text-left">
+          <div className={`${
+            isLandscape || isCard ? 'text-2xl sm:text-3xl md:text-4xl' : 'text-3xl sm:text-4xl md:text-5xl'
+          } font-black leading-none ${fontClass} tracking-wide ${themeStyles.card1PhoneColor} drop-shadow`}>
+            <SafeHtml content={data.phone || '(00) 00000-0000'} />
+          </div>
+
+          {data.phoneSecondary && (
+            <div className="text-xs sm:text-sm font-black mt-1.5 flex items-center justify-center sm:justify-start gap-1.5">
+              <span className="bg-white/20 text-white text-[9px] uppercase font-black px-1 py-0.2 rounded">
+                2º Tel
+              </span>
+              <span className="opacity-95 font-bold">
+                <SafeHtml content={data.phoneSecondary} />
+              </span>
+            </div>
+          )}
+
+          {data.card1Highlight && (
+            <div className={`text-[10.5px] sm:text-xs font-black mt-2 px-2 py-1 rounded-lg text-center sm:text-left ${themeStyles.card1HighlightBg}`}>
+              <SafeHtml content={data.card1Highlight} />
+            </div>
+          )}
+        </div>
+
+        {/* QR Code de Alto Contraste */}
+        {data.showQrCode && qrCodeUrl && (
+          <div className="bg-white p-1.5 sm:p-2 rounded-xl border-2 sm:border-3 border-black flex-shrink-0 flex flex-col items-center shadow-xl">
+            <img 
+              src={qrCodeUrl} 
+              alt="QR Code WhatsApp" 
+              className={`${isLandscape || isCard ? 'w-14 h-14 sm:w-16 sm:h-16' : 'w-16 h-16 sm:w-20 sm:h-20'}`} 
+            />
+            <span className="text-[9px] text-black font-black uppercase mt-0.5 tracking-tight leading-none bg-amber-400 px-1 py-0.5 rounded">
+              WHATSAPP
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderServicesCards = () => (
+    <div
+      key="servicesCards"
+      draggable={!!onReorderElements}
+      onDragStart={(e) => handleDragStart(e, 'servicesCards')}
+      onDragOver={(e) => handleDragOver(e, 'servicesCards')}
+      onDrop={(e) => handleDrop(e, 'servicesCards')}
+      onDragEnd={handleDragEnd}
+      className={`group relative grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3.5 transition-all ${
+        draggedKey === 'servicesCards' ? 'opacity-30' : ''
+      } ${targetKey === 'servicesCards' ? 'ring-4 ring-amber-400 rounded-xl' : ''}`}
+    >
+      {onReorderElements && (
+        <div className="no-print absolute -top-3 right-2 z-10 opacity-0 group-hover:opacity-100 bg-black/70 text-amber-300 p-1 rounded cursor-grab active:cursor-grabbing text-[10px] flex items-center gap-1 transition-opacity">
+          <GripVertical className="w-3.5 h-3.5" />
+          <span>Arrastar Serviços</span>
+        </div>
+      )}
+
+      {/* CARD 2: SERVIÇOS */}
+      <div className={`${themeStyles.card2Bg} rounded-xl overflow-hidden flex flex-col justify-start transition-all`}>
+        <div className={`${themeStyles.cardHeaderBg} px-3 py-1.5 sm:py-2 flex items-center justify-between`}>
+          <div className="flex items-center gap-1.5">
+            <span className={`${themeStyles.cardIconBg} p-1 rounded flex items-center justify-center`}>
+              <ShieldCheck className="w-3 h-3" />
+            </span>
+            <span className={`text-[11px] sm:text-xs md:text-sm font-black ${themeStyles.cardTitleColor}`}>
+              <SafeHtml content={data.card2Title || 'SERVIÇOS DE FRETES'} />
+            </span>
+          </div>
+          <ChevronRight className="w-3 h-3 opacity-60" />
+        </div>
+
+        <div className="p-2.5 sm:p-3 flex-1 flex flex-col justify-center">
+          <CardListItems content={data.card2Content} isCompact={isLandscape || isCard || is4Up} />
+        </div>
+      </div>
+
+      {/* CARD 3: REGIÃO & PAGAMENTO */}
+      <div className={`${themeStyles.card3Bg} rounded-xl overflow-hidden flex flex-col justify-start transition-all`}>
+        <div className={`${themeStyles.cardHeaderBg} px-3 py-1.5 sm:py-2 flex items-center justify-between`}>
+          <div className="flex items-center gap-1.5">
+            <span className={`${themeStyles.cardIconBg} p-1 rounded flex items-center justify-center`}>
+              <MapPin className="w-3 h-3" />
+            </span>
+            <span className={`text-[11px] sm:text-xs md:text-sm font-black ${themeStyles.cardTitleColor}`}>
+              <SafeHtml content={data.card3Title || 'REGIÃO & PAGAMENTO'} />
+            </span>
+          </div>
+          <CreditCard className="w-3 h-3 opacity-60" />
+        </div>
+
+        <div className="p-2.5 sm:p-3 flex-1 flex flex-col justify-center">
+          <CardListItems content={data.card3Content} isCompact={isLandscape || isCard || is4Up} />
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderFooter = () => (
+    data.footerText ? (
+      <div
+        key="footer"
+        draggable={!!onReorderElements}
+        onDragStart={(e) => handleDragStart(e, 'footer')}
+        onDragOver={(e) => handleDragOver(e, 'footer')}
+        onDrop={(e) => handleDrop(e, 'footer')}
+        onDragEnd={handleDragEnd}
+        className={`group relative ${themeStyles.footerBg} text-center py-2 px-3 text-[11px] sm:text-xs md:text-sm font-black tracking-wide transition-all ${
+          draggedKey === 'footer' ? 'opacity-30' : ''
+        } ${targetKey === 'footer' ? 'ring-4 ring-amber-400' : ''}`}
+      >
+        {onReorderElements && (
+          <div className="no-print absolute top-1 right-2 opacity-0 group-hover:opacity-100 bg-black/70 text-amber-300 p-1 rounded cursor-grab active:cursor-grabbing text-[10px] flex items-center gap-1 transition-opacity">
+            <GripVertical className="w-3 h-3" />
+            <span>Arrastar Rodapé</span>
+          </div>
+        )}
+        <SafeHtml content={data.footerText} />
+      </div>
+    ) : null
+  );
+
+  // Mapeamento dos renderizadores
+  const elementRenderers: Record<FlyerElementKey, () => React.ReactNode> = {
+    header: renderHeader,
+    photo: renderPhoto,
+    card1: renderCard1,
+    servicesCards: renderServicesCards,
+    footer: renderFooter
+  };
+
+  // Separação de elementos topo/rodapé vs miolo caso seja o layout padrão, ou renderização sequencial
+  const hasCustomOrder = currentOrder.length === 5;
 
   return (
     <div
       ref={ref}
-      id="panfleto-caminhao-fretes"
-      className={`${formatClasses} ${themeStyles.bg} ${themeStyles.text} rounded-2xl shadow-2xl overflow-hidden flex flex-col justify-between select-none relative transition-all duration-200 border-4 ${themeStyles.borderAccent} ${isGrayscalePreview ? 'grayscale contrast-125' : ''}`}
-      style={{
-        boxSizing: 'border-box'
-      }}
+      className={`${formatContainerClass} ${themeStyles.bg} ${themeStyles.text} rounded-2xl shadow-2xl overflow-hidden flex flex-col justify-between select-none relative transition-all duration-200 border-4 ${themeStyles.borderAccent} ${
+        isGrayscalePreview ? 'grayscale contrast-125' : ''
+      }`}
+      style={{ boxSizing: 'border-box' }}
     >
-      {/* 1. TOPO: TÍTULO SUPER IMPONENTE COM SUPORTE A HTML */}
-      <div className={`${themeStyles.topBannerBg} px-4 py-3.5 text-center`}>
-        <div className={`text-3xl sm:text-4xl md:text-5xl font-black uppercase leading-tight ${fontClass}`}>
-          <SafeHtml content={data.title || 'FRETES EM GERAL'} />
-        </div>
-        
-        {data.subtitle && (
-          <div className={`text-xs sm:text-sm font-black uppercase tracking-wider mt-1 ${themeStyles.topBannerSub}`}>
-            <SafeHtml content={data.subtitle} />
-          </div>
-        )}
-        
-        {data.driverName && (
-          <div className="mt-2 inline-flex items-center justify-center">
-            <div className={`text-xs sm:text-sm font-black px-3.5 py-0.5 rounded-full shadow-sm flex items-center gap-1.5 ${themeStyles.driverBadge}`}>
-              <Truck className="w-3.5 h-3.5" />
-              <SafeHtml content={data.driverName} />
-            </div>
-          </div>
-        )}
-      </div>
+      {/* Renderização sequencial segundo elementOrder */}
+      {hasCustomOrder ? (
+        <div className="flex-1 flex flex-col justify-between">
+          {currentOrder.map((key, index) => {
+            const renderer = elementRenderers[key];
+            if (!renderer) return null;
 
-      {/* 2. CORPO PRINCIPAL COM FOTO DO CAMINHÃO E OS 3 CARDS MODERNIZADOS */}
-      <div className="flex-1 p-3.5 sm:p-4 md:p-5 flex flex-col justify-between gap-3.5">
-        
-        {/* FOTO ORIGINAL DO CAMINHÃO COM ALTO CONTRASTE */}
-        <div className={`relative w-full rounded-xl overflow-hidden bg-black/30 ${themeStyles.photoBorder} min-h-[175px] max-h-[265px] flex items-center justify-center`}>
-          {data.truckPhotoUrl ? (
-            <img
-              src={data.truckPhotoUrl}
-              alt="Foto do Caminhão de Fretes"
-              className="w-full h-full object-cover object-center"
-              crossOrigin="anonymous"
-            />
-          ) : (
-            <div className="p-6 text-center font-black text-base opacity-70">
-              [ FOTO DO CAMINHÃO ]
-            </div>
-          )}
+            // Se for bloco intermediário (não cabeçalho nem rodapé), adicionamos container de padding
+            const isMiddle = key !== 'header' && key !== 'footer';
 
-          {data.vehicleType && (
-            <div className="absolute bottom-2.5 left-2.5 bg-black text-white text-xs sm:text-sm font-black px-3 py-1 rounded-lg border-2 border-white shadow-xl flex items-center gap-1.5">
-              <Truck className="w-4 h-4 text-amber-300" />
-              <SafeHtml content={data.vehicleType} />
-            </div>
-          )}
-        </div>
-
-        {/* 🌟 CARD 1: MEGA BLOCO DE CONTATO & WHATSAPP (MODERNIZADO & ALTO CONTRASTE P/ P&B) */}
-        <div className={`${themeStyles.card1Bg} rounded-2xl p-4 sm:p-5 relative overflow-hidden transition-all`}>
-          
-          {/* Header do Card 1: Badge Moderno com Ícone */}
-          <div className="flex items-center justify-between mb-3 border-b-2 border-white/15 pb-2">
-            <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs sm:text-sm font-black uppercase tracking-wider shadow-sm ${themeStyles.card1Badge}`}>
-              <Phone className="w-3.5 h-3.5" />
-              <SafeHtml content={data.card1Title || 'LIGUE OU CHAME NO WHATSAPP'} />
-            </div>
-
-            <div className="hidden sm:flex items-center gap-1.5 text-[11px] font-black uppercase tracking-tight opacity-90">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Atendimento Rápido</span>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between gap-3 sm:gap-5">
-            {/* Números de Telefone Grandes e Ultra Legíveis em P&B */}
-            <div className="flex-1 text-center sm:text-left">
-              <div className={`text-3xl sm:text-4xl md:text-5xl font-black leading-none ${fontClass} tracking-wide ${themeStyles.card1PhoneColor} drop-shadow`}>
-                <SafeHtml content={data.phone || '(00) 00000-0000'} />
+            return isMiddle ? (
+              <div key={key} className="px-3 sm:px-4 py-1.5 sm:py-2">
+                {renderer()}
               </div>
-
-              {data.phoneSecondary && (
-                <div className="text-sm sm:text-base font-black mt-2 flex items-center justify-center sm:justify-start gap-1.5">
-                  <span className="bg-white/20 text-white text-[10px] uppercase font-black px-1.5 py-0.5 rounded">
-                    2º Tel
-                  </span>
-                  <span className="opacity-95 font-bold">
-                    <SafeHtml content={data.phoneSecondary} />
-                  </span>
-                </div>
-              )}
-
-              {data.card1Highlight && (
-                <div className={`text-xs sm:text-xs font-black mt-2.5 px-2.5 py-1.5 rounded-lg text-center sm:text-left ${themeStyles.card1HighlightBg}`}>
-                  <SafeHtml content={data.card1Highlight} />
-                </div>
-              )}
-            </div>
-
-            {/* QR Code de Alto Contraste (Fundo branco puro + borda preta sólida p/ leitura a laser) */}
-            {data.showQrCode && qrCodeUrl && (
-              <div className="bg-white p-2 rounded-xl border-3 border-black flex-shrink-0 flex flex-col items-center shadow-2xl">
-                <img src={qrCodeUrl} alt="QR Code WhatsApp" className="w-18 h-18 sm:w-22 sm:h-22" />
-                <span className="text-[10px] text-black font-black uppercase mt-1 tracking-tight leading-none bg-amber-400 px-1.5 py-0.5 rounded">
-                  ESCANEIE AQUI
-                </span>
-              </div>
-            )}
-          </div>
+            ) : (
+              <React.Fragment key={key}>
+                {renderer()}
+              </React.Fragment>
+            );
+          })}
         </div>
-
-        {/* 🌟 OS 2 CARDS A SEGUIR: SERVIÇOS + REGIÃO/PAGAMENTO (UMA LINHA POR ENTRADA DE TEXTO SEM QUEBRA) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-          
-          {/* CARD 2: SERVIÇOS DE FRETES */}
-          <div className={`${themeStyles.card2Bg} rounded-xl overflow-hidden flex flex-col justify-start transition-all`}>
-            {/* Header com barra de contraste */}
-            <div className={`${themeStyles.cardHeaderBg} px-3.5 py-2 flex items-center justify-between`}>
-              <div className="flex items-center gap-2">
-                <span className={`${themeStyles.cardIconBg} p-1 rounded-md flex items-center justify-center`}>
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                </span>
-                <span className={`text-xs sm:text-sm ${themeStyles.cardTitleColor}`}>
-                  <SafeHtml content={data.card2Title || 'SERVIÇOS DE FRETES'} />
-                </span>
-              </div>
-              <ChevronRight className="w-3.5 h-3.5 opacity-60" />
-            </div>
-
-            {/* Conteúdo: Uma linha por item com suporte total a HTML */}
-            <div className="p-3 sm:p-3.5 flex-1 flex flex-col justify-center">
-              <CardListItems content={data.card2Content} />
-            </div>
+      ) : (
+        <>
+          {renderHeader()}
+          <div className="flex-1 p-3.5 sm:p-4 flex flex-col justify-between gap-3">
+            {renderPhoto()}
+            {renderCard1()}
+            {renderServicesCards()}
           </div>
-
-          {/* CARD 3: REGIÃO & PAGAMENTO */}
-          <div className={`${themeStyles.card3Bg} rounded-xl overflow-hidden flex flex-col justify-start transition-all`}>
-            {/* Header com barra de contraste */}
-            <div className={`${themeStyles.cardHeaderBg} px-3.5 py-2 flex items-center justify-between`}>
-              <div className="flex items-center gap-2">
-                <span className={`${themeStyles.cardIconBg} p-1 rounded-md flex items-center justify-center`}>
-                  <MapPin className="w-3.5 h-3.5" />
-                </span>
-                <span className={`text-xs sm:text-sm ${themeStyles.cardTitleColor}`}>
-                  <SafeHtml content={data.card3Title || 'REGIÃO & PAGAMENTO'} />
-                </span>
-              </div>
-              <CreditCard className="w-3.5 h-3.5 opacity-60" />
-            </div>
-
-            {/* Conteúdo: Uma linha por item com suporte total a HTML */}
-            <div className="p-3 sm:p-3.5 flex-1 flex flex-col justify-center">
-              <CardListItems content={data.card3Content} />
-            </div>
-          </div>
-
-        </div>
-
-      </div>
-
-      {/* 3. RODAPÉ SUCINTO COM ALTO CONTRASTE */}
-      {data.footerText && (
-        <div className={`${themeStyles.footerBg} text-center py-2.5 px-3 text-xs sm:text-sm font-black tracking-wide`}>
-          <SafeHtml content={data.footerText} />
-        </div>
+          {renderFooter()}
+        </>
       )}
+    </div>
+  );
+});
+
+SingleFlyer.displayName = 'SingleFlyer';
+
+/**
+ * FlyerView principal: gerencia layouts de página única, Folha Dupla (2 por A4) e 4 por Folha (4-up)
+ */
+export const FlyerView = forwardRef<HTMLDivElement, FlyerViewProps>((props, ref) => {
+  const { data, isGrayscalePreview } = props;
+
+  // 1. FOLHA DUPLA (2 por Folha A4 / A5 com linha de corte)
+  if (data.format === 'double-a5') {
+    return (
+      <div
+        ref={ref}
+        id="panfleto-caminhao-fretes"
+        className={`w-full max-w-[620px] bg-white text-zinc-950 p-2 sm:p-3 rounded-2xl shadow-2xl border-2 border-zinc-300 flex flex-col gap-3 ${
+          isGrayscalePreview ? 'grayscale contrast-125' : ''
+        }`}
+      >
+        {/* 1º Panfleto da Folha */}
+        <div className="w-full">
+          <SingleFlyer {...props} isSheetDuplicate={false} />
+        </div>
+
+        {/* Linha de Corte Tracejada */}
+        <div className="w-full flex items-center justify-center gap-2 py-1 border-t-2 border-dashed border-zinc-400 text-zinc-500 font-bold text-[11px] select-none">
+          <Scissors className="w-3.5 h-3.5" />
+          <span>CORTE AQUI (2 PANFLETOS POR FOLHA A4)</span>
+          <Scissors className="w-3.5 h-3.5 transform -scale-x-100" />
+        </div>
+
+        {/* 2º Panfleto da Folha (Cópia Exata) */}
+        <div className="w-full">
+          <SingleFlyer {...props} isSheetDuplicate={true} />
+        </div>
+      </div>
+    );
+  }
+
+  // 2. 4 POR FOLHA (4-up / Mini Panfletos com 4 cópias e linhas de corte)
+  if (data.format === '4-up') {
+    return (
+      <div
+        ref={ref}
+        id="panfleto-caminhao-fretes"
+        className={`w-full max-w-[720px] bg-white text-zinc-950 p-2 sm:p-3 rounded-2xl shadow-2xl border-2 border-zinc-300 flex flex-col gap-2 ${
+          isGrayscalePreview ? 'grayscale contrast-125' : ''
+        }`}
+      >
+        <div className="grid grid-cols-2 gap-3">
+          <SingleFlyer {...props} isSheetDuplicate={false} />
+          <SingleFlyer {...props} isSheetDuplicate={true} />
+        </div>
+
+        <div className="w-full flex items-center justify-center gap-2 py-0.5 border-t-2 border-dashed border-zinc-400 text-zinc-500 font-bold text-[10px] select-none">
+          <Scissors className="w-3 h-3" />
+          <span>LINHA DE CORTE HORIZONTAL & VERTICAL (4 POR FOLHA A4)</span>
+          <Scissors className="w-3 h-3 transform -scale-x-100" />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <SingleFlyer {...props} isSheetDuplicate={true} />
+          <SingleFlyer {...props} isSheetDuplicate={true} />
+        </div>
+      </div>
+    );
+  }
+
+  // 3. FORMATO INDIVIDUAL (Vertical A4, Quadrado 1:1, Paisagem Horizontal ou Cartão)
+  return (
+    <div id="panfleto-caminhao-fretes" className="w-full flex justify-center">
+      <SingleFlyer ref={ref} {...props} />
     </div>
   );
 });

@@ -11,7 +11,20 @@ export type FlyerTheme =
   | 'red-black' 
   | 'print-grayscale';
 
-export type FlyerFormat = 'vertical' | 'square' | 'card';
+export type FlyerFormat = 
+  | 'vertical'     // A4 Vertical / 1 por folha
+  | 'double-a5'    // Folha Dupla / 2 por folha A4 (A5)
+  | '4-up'         // 4 por folha A4 (Mini Panfletos)
+  | 'square'       // Quadrado 1:1 (WhatsApp & Redes)
+  | 'landscape'    // Paisagem / Horizontal A4
+  | 'card';        // Cartão Compacto
+
+export type FlyerElementKey = 
+  | 'header'          // Cabeçalho (Título, Subtítulo, Motorista)
+  | 'photo'           // Foto do Caminhão + Badge do Veículo
+  | 'card1'           // Card Principal (Telefone Gigante, 2º Tel, QR Code, Urgência)
+  | 'servicesCards'   // Os 2 Cards Secundários (Serviços + Região/Pagamento)
+  | 'footer';         // Rodapé
 
 export type ImposingFont = 
   | 'anton' 
@@ -43,6 +56,7 @@ export interface FlyerData {
   theme: FlyerTheme;
   format: FlyerFormat;
   fontFamily: ImposingFont;
+  elementOrder: FlyerElementKey[]; // Ordem dos blocos com arrastar e soltar
 }
 
 export interface TruckPreset {
@@ -51,3 +65,4 @@ export interface TruckPreset {
   url: string;
   tag: string;
 }
+

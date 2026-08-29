@@ -49,5 +49,6 @@ export const DEFAULT_FLYER_DATA: FlyerData = {
   showQrCode: true,
   theme: 'clean-white',
   format: 'vertical',
-  fontFamily: 'anton'
+  fontFamily: 'anton',
+  elementOrder: ['header', 'photo', 'card1', 'servicesCards', 'footer']
 };

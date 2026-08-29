@@ -27,11 +27,17 @@
 }
 
 @media print {
-  body {
+  @page {
+    size: auto;
+    margin: 5mm;
+  }
+  html, body {
     background: white !important;
     color: black !important;
     padding: 0 !important;
     margin: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
   .no-print {
     display: none !important;
@@ -40,10 +46,18 @@
     box-shadow: none !important;
     border: none !important;
     margin: 0 auto !important;
+    padding: 0 !important;
     max-width: 100% !important;
     width: 100% !important;
-    height: 100vh !important;
+    transform: none !important;
     page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  #panfleto-caminhao-fretes {
+    box-shadow: none !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    margin: 0 auto !important;
   }
 }
 

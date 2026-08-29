@@ -1,7 +1,8 @@
 import React, { useRef } from 'react';
-import { FlyerData, FlyerTheme, FlyerFormat, ImposingFont } from '../types';
+import { FlyerData, FlyerTheme, FlyerFormat, ImposingFont, FlyerElementKey } from '../types';
 import { TRUCK_PRESETS } from '../data/defaults';
 import { formatPhoneMask } from '../utils/flyerHelpers';
+import { ElementOrderManager } from './ElementOrderManager';
 import { 
   Phone, 
   Truck, 
@@ -14,7 +15,10 @@ import {
   Code2,
   Heading,
   Sun,
-  Printer
+  Printer,
+  Sparkles,
+  Scissors,
+  GripVertical
 } from 'lucide-react';
 
 interface FlyerEditorProps {
@@ -80,10 +84,13 @@ export function FlyerEditor({ data, onChange }: FlyerEditorProps) {
     { id: 'print-grayscale', name: 'P&B / Escala de Cinza', bg: 'bg-zinc-100', text: 'text-black', tag: 'Impressão Laser' }
   ];
 
-  const formats: { id: FlyerFormat; label: string }[] = [
-    { id: 'vertical', label: 'Panfleto A4 / Grande' },
-    { id: 'square', label: 'Quadrado (WhatsApp)' },
-    { id: 'card', label: 'Cartão Horizontal' }
+  const formats: { id: FlyerFormat; label: string; desc: string; iconTag: string }[] = [
+    { id: 'vertical', label: '1x A4 Vertical', desc: '1 Panfleto Grande por Folha', iconTag: '1 por A4' },
+    { id: 'double-a5', label: 'Folha Dupla (2x A5)', desc: '2 Cópias com Linha de Corte', iconTag: '2 por A4' },
+    { id: '4-up', label: '4 por Folha A4', desc: 'Mini Panfletos p/ Distribuição', iconTag: '4 por A4' },
+    { id: 'square', label: '1:1 Quadrado', desc: 'Post WhatsApp & Instagram', iconTag: '1:1 Social' },
+    { id: 'landscape', label: 'Paisagem Horizontal', desc: 'Faixa e Cartaz Horizontal', iconTag: 'Horizontal' },
+    { id: 'card', label: 'Cartão de Visita', desc: 'Panfleto Compacto de Bolso', iconTag: 'Compacto' }
   ];
 
   return (
@@ -230,9 +237,9 @@ export function FlyerEditor({ data, onChange }: FlyerEditorProps) {
               type="text"
               value={data.phone}
               onChange={handlePhoneChange}
-              placeholder="(11) 98765-4321"
+              placeholder="Ex: (11) 98765-4321 (WhatsApp Direto)"
               maxLength={15}
-              className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 rounded-lg px-3 py-2.5 text-base font-black text-amber-300 outline-none"
+              className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 rounded-lg px-3 py-2.5 text-base font-black text-amber-300 outline-none placeholder:text-zinc-600"
             />
           </div>
 
@@ -244,9 +251,9 @@ export function FlyerEditor({ data, onChange }: FlyerEditorProps) {
               type="text"
               value={data.phoneSecondary}
               onChange={handleSecondaryPhoneChange}
-              placeholder="(11) 91234-5678"
+              placeholder="Ex: (11) 91234-5678 (Fixo ou 2º WhatsApp)"
               maxLength={15}
-              className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2.5 text-sm text-zinc-200 font-bold outline-none"
+              className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2.5 text-sm text-zinc-200 font-bold outline-none placeholder:text-zinc-600"
             />
           </div>
         </div>
@@ -277,9 +284,27 @@ export function FlyerEditor({ data, onChange }: FlyerEditorProps) {
             type="text"
             value={data.card1Title}
             onChange={(e) => onChange({ card1Title: e.target.value })}
-            placeholder="LIGUE OU CHAME NO WHATSAPP"
-            className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-xs font-bold text-zinc-100 outline-none"
+            placeholder="Ex: LIGUE AGORA OU CHAME NO WHATSAPP • ATENDIMENTO 24H"
+            className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-xs font-bold text-zinc-100 outline-none placeholder:text-zinc-600"
           />
+          {/* Sugestões rápidas de título do card 1 */}
+          <div className="flex flex-wrap gap-1.5 mt-1.5 items-center">
+            <span className="text-[10px] text-zinc-500 flex items-center gap-1"><Sparkles className="w-2.5 h-2.5 text-amber-400" /> Sugestões:</span>
+            {[
+              'LIGUE OU CHAME NO WHATSAPP',
+              'DISK FRETES RÁPIDO & WHATSAPP',
+              'SOLICITE SEU ORÇAMENTO AGORA'
+            ].map((text) => (
+              <button
+                key={text}
+                type="button"
+                onClick={() => onChange({ card1Title: text })}
+                className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded transition-colors"
+              >
+                {text}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div>
@@ -290,9 +315,27 @@ export function FlyerEditor({ data, onChange }: FlyerEditorProps) {
             type="text"
             value={data.card1Highlight}
             onChange={(e) => onChange({ card1Highlight: e.target.value })}
-            placeholder="ORÇAMENTO RÁPIDO SEM COMPROMISSO • ATENDIMENTO 24H"
-            className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-xs text-zinc-200 outline-none"
+            placeholder="Ex: ORÇAMENTO RÁPIDO SEM COMPROMISSO • COBRIMOS QUALQUER OFERTA"
+            className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-xs text-zinc-200 outline-none placeholder:text-zinc-600"
           />
+          {/* Sugestões rápidas de chamada de urgência */}
+          <div className="flex flex-wrap gap-1.5 mt-1.5 items-center">
+            <span className="text-[10px] text-zinc-500 flex items-center gap-1"><Sparkles className="w-2.5 h-2.5 text-amber-400" /> Sugestões:</span>
+            {[
+              'ORÇAMENTO RÁPIDO SEM COMPROMISSO • ATENDIMENTO 24H',
+              'PREÇO JUSTO • SAÍDAS IMEDIATAS TODOS OS DIAS',
+              'COBRIMOS QUALQUER ORÇAMENTO • CHAME JÁ'
+            ].map((text) => (
+              <button
+                key={text}
+                type="button"
+                onClick={() => onChange({ card1Highlight: text })}
+                className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded transition-colors"
+              >
+                {text}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="flex items-center justify-between pt-1">
@@ -337,8 +380,8 @@ export function FlyerEditor({ data, onChange }: FlyerEditorProps) {
             type="text"
             value={data.card2Title}
             onChange={(e) => onChange({ card2Title: e.target.value })}
-            placeholder="SERVIÇOS DE FRETES"
-            className="w-full bg-zinc-900 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-1.5 text-xs font-bold text-zinc-100 outline-none"
+            placeholder="Ex: SERVIÇOS DE FRETES (ou NOSSOS SERVIÇOS)"
+            className="w-full bg-zinc-900 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-1.5 text-xs font-bold text-zinc-100 outline-none placeholder:text-zinc-600"
           />
 
           <div className="flex items-center justify-between pt-1">
@@ -373,9 +416,37 @@ export function FlyerEditor({ data, onChange }: FlyerEditorProps) {
             rows={4}
             value={data.card2Content}
             onChange={(e) => onChange({ card2Content: e.target.value })}
-            placeholder="<b>Fretes Urbanos e Intermunicipais</b><br><b>Mudanças Residenciais e Comerciais</b><br><b>Cargas Fechadas e Pequenos Volumes</b>"
-            className="w-full bg-zinc-900 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-xs font-mono text-zinc-100 outline-none resize-none leading-relaxed"
+            placeholder={`Exemplos reais e vendedores (1 item por linha):
+<b>Fretes Urbanos e Intermunicipais</b>
+<b>Mudanças Residenciais e Comerciais</b>
+<b>Cargas Fechadas e Pequenos Volumes</b>
+<b>Entregas e Coletas Rápidas no Dia</b>`}
+            className="w-full bg-zinc-900 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-xs font-mono text-zinc-100 outline-none resize-none leading-relaxed placeholder:text-zinc-600"
           />
+          {/* Presets rápidos para Card 2 */}
+          <div className="flex flex-wrap gap-1.5 pt-1 items-center">
+            <span className="text-[10px] text-zinc-500 flex items-center gap-1"><Sparkles className="w-2.5 h-2.5 text-amber-400" /> Preencher com:</span>
+            <button
+              type="button"
+              onClick={() => onChange({
+                card2Title: 'SERVIÇOS DE FRETES',
+                card2Content: '<b>Fretes Urbanos e Intermunicipais</b><br><b>Mudanças Residenciais e Comerciais</b><br><b>Cargas Fechadas e Pequenos Volumes</b><br><b>Entregas e Coletas Rápidas no Dia</b>'
+              })}
+              className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded transition-colors"
+            >
+              Fretes & Mudanças
+            </button>
+            <button
+              type="button"
+              onClick={() => onChange({
+                card2Title: 'SERVIÇOS DE TRANSPORTES',
+                card2Content: '<b>Coletas e Entregas Comerciais</b><br><b>Cargas Fracionadas e Dedicadas</b><br><b>Distribuição de Mercadorias</b><br><b>Viagens para Todo o Estado</b>'
+              })}
+              className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded transition-colors"
+            >
+              Comercial & Cargas
+            </button>
+          </div>
         </div>
 
         {/* CARD 3: REGIÃO & PAGAMENTO */}
@@ -390,8 +461,8 @@ export function FlyerEditor({ data, onChange }: FlyerEditorProps) {
             type="text"
             value={data.card3Title}
             onChange={(e) => onChange({ card3Title: e.target.value })}
-            placeholder="REGIÃO & PAGAMENTO"
-            className="w-full bg-zinc-900 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-1.5 text-xs font-bold text-zinc-100 outline-none"
+            placeholder="Ex: REGIÃO & PAGAMENTO (ou CONDIÇÕES & ÁREA)"
+            className="w-full bg-zinc-900 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-1.5 text-xs font-bold text-zinc-100 outline-none placeholder:text-zinc-600"
           />
 
           <div className="flex items-center justify-between pt-1">
@@ -426,9 +497,37 @@ export function FlyerEditor({ data, onChange }: FlyerEditorProps) {
             rows={4}
             value={data.card3Content}
             onChange={(e) => onChange({ card3Content: e.target.value })}
-            placeholder="<b>Atendimento:</b> Capital, Litoral e Interior<br><b>Pagamento:</b> Pix, Cartão e Dinheiro<br><b>Agilidade:</b> Pontualidade e Cuidado"
-            className="w-full bg-zinc-900 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-xs font-mono text-zinc-100 outline-none resize-none leading-relaxed"
+            placeholder={`Exemplos reais e vendedores (1 item por linha):
+<b>Atendimento:</b> Capital, Litoral e Interior
+<b>Pagamento:</b> Pix, Cartões em até 12x e Dinheiro
+<b>Agilidade:</b> Cargas com Cuidado e Pontualidade
+<b>Orçamento:</b> Rápido e Sem Compromisso`}
+            className="w-full bg-zinc-900 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-xs font-mono text-zinc-100 outline-none resize-none leading-relaxed placeholder:text-zinc-600"
           />
+          {/* Presets rápidos para Card 3 */}
+          <div className="flex flex-wrap gap-1.5 pt-1 items-center">
+            <span className="text-[10px] text-zinc-500 flex items-center gap-1"><Sparkles className="w-2.5 h-2.5 text-amber-400" /> Preencher com:</span>
+            <button
+              type="button"
+              onClick={() => onChange({
+                card3Title: 'REGIÃO & PAGAMENTO',
+                card3Content: '<b>Atendimento:</b> Capital, Litoral e Interior<br><b>Pagamento:</b> Pix, Cartões em até 12x e Dinheiro<br><b>Agilidade:</b> Cargas com Cuidado e Pontualidade<br><b>Orçamento:</b> Rápido e Sem Compromisso'
+              })}
+              className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded transition-colors"
+            >
+              Completo Pix/Cartão
+            </button>
+            <button
+              type="button"
+              onClick={() => onChange({
+                card3Title: 'COBERTURA & CONDIÇÕES',
+                card3Content: '<b>Região:</b> Grande SP, Vale do Paraíba e Litoral<br><b>Facilidade:</b> Parcelamos no Cartão de Crédito<br><b>Segurança:</b> Caminhão Rastreado e Seguro<br><b>Desconto:</b> 10% de Desconto para Pagamento via Pix'
+              })}
+              className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded transition-colors"
+            >
+              Com Desconto Pix
+            </button>
+          </div>
         </div>
       </div>
 
@@ -506,9 +605,28 @@ export function FlyerEditor({ data, onChange }: FlyerEditorProps) {
               type="text"
               value={data.title}
               onChange={(e) => onChange({ title: e.target.value })}
-              placeholder="FRETES EM GERAL"
-              className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-sm text-zinc-100 font-bold outline-none"
+              placeholder="Ex: FRETES E MUDANÇAS (ou DISK FRETES 24H)"
+              className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-sm text-zinc-100 font-bold outline-none placeholder:text-zinc-600"
             />
+            {/* Sugestões rápidas de título */}
+            <div className="flex flex-wrap gap-1.5 mt-1.5 items-center">
+              <span className="text-[10px] text-zinc-500 flex items-center gap-1"><Sparkles className="w-2.5 h-2.5 text-amber-400" /> Sugestões:</span>
+              {[
+                'FRETES EM GERAL',
+                'FRETES & MUDANÇAS',
+                'DISK FRETES 24H',
+                'TRANSPORTE RÁPIDO'
+              ].map((text) => (
+                <button
+                  key={text}
+                  type="button"
+                  onClick={() => onChange({ title: text })}
+                  className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded transition-colors"
+                >
+                  {text}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div>
@@ -519,9 +637,27 @@ export function FlyerEditor({ data, onChange }: FlyerEditorProps) {
               type="text"
               value={data.subtitle}
               onChange={(e) => onChange({ subtitle: e.target.value })}
-              placeholder="TRANSPORTE RÁPIDO E SEGURO"
-              className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-xs text-zinc-100 outline-none"
+              placeholder="Ex: TRANSPORTE RÁPIDO, SEGURO E COM PREÇO JUSTO"
+              className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-xs text-zinc-100 outline-none placeholder:text-zinc-600"
             />
+            {/* Sugestões rápidas de subtítulo */}
+            <div className="flex flex-wrap gap-1.5 mt-1.5 items-center">
+              <span className="text-[10px] text-zinc-500 flex items-center gap-1"><Sparkles className="w-2.5 h-2.5 text-amber-400" /> Sugestões:</span>
+              {[
+                'TRANSPORTE RÁPIDO E SEGURO',
+                'ATENDIMENTO 24H • PREÇO JUSTO',
+                'LIGOU, CHEGOU NO MESMO DIA'
+              ].map((text) => (
+                <button
+                  key={text}
+                  type="button"
+                  onClick={() => onChange({ subtitle: text })}
+                  className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded transition-colors"
+                >
+                  {text}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -534,8 +670,8 @@ export function FlyerEditor({ data, onChange }: FlyerEditorProps) {
               type="text"
               value={data.driverName}
               onChange={(e) => onChange({ driverName: e.target.value })}
-              placeholder="Carlos Transportes"
-              className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-sm text-zinc-100 outline-none"
+              placeholder="Ex: Carlos Fretes Express (ou TransSilva & Cia)"
+              className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-600"
             />
           </div>
 
@@ -547,9 +683,28 @@ export function FlyerEditor({ data, onChange }: FlyerEditorProps) {
               type="text"
               value={data.vehicleType}
               onChange={(e) => onChange({ vehicleType: e.target.value })}
-              placeholder="CAMINHÃO BAÚ FECHADO"
-              className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-sm text-zinc-100 outline-none"
+              placeholder="Ex: CAMINHÃO BAÚ FECHADO 3/4 (ou HR / IVECO)"
+              className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-600"
             />
+            {/* Sugestões rápidas de veículo */}
+            <div className="flex flex-wrap gap-1.5 mt-1.5 items-center">
+              <span className="text-[10px] text-zinc-500 flex items-center gap-1"><Sparkles className="w-2.5 h-2.5 text-amber-400" /> Sugestões:</span>
+              {[
+                'CAMINHÃO BAÚ FECHADO',
+                'CAMINHÃO 3/4 CARROCERIA',
+                'HR / IVECO DAILY BAÚ',
+                'CAMINHÃO TOCO'
+              ].map((text) => (
+                <button
+                  key={text}
+                  type="button"
+                  onClick={() => onChange({ vehicleType: text })}
+                  className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded transition-colors"
+                >
+                  {text}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -561,33 +716,90 @@ export function FlyerEditor({ data, onChange }: FlyerEditorProps) {
             type="text"
             value={data.footerText}
             onChange={(e) => onChange({ footerText: e.target.value })}
-            placeholder="FRETES COM SEGURANÇA E CONFIANÇA"
-            className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-xs text-zinc-100 outline-none"
+            placeholder="Ex: FRETES COM SEGURANÇA E CONFIANÇA • PEÇA SEU ORÇAMENTO AGORA!"
+            className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-3 py-2 text-xs text-zinc-100 outline-none placeholder:text-zinc-600"
           />
+          {/* Sugestões rápidas de rodapé */}
+          <div className="flex flex-wrap gap-1.5 mt-1.5 items-center">
+            <span className="text-[10px] text-zinc-500 flex items-center gap-1"><Sparkles className="w-2.5 h-2.5 text-amber-400" /> Sugestões:</span>
+            {[
+              'FRETES COM SEGURANÇA E CONFIANÇA • PEÇA SEU ORÇAMENTO AGORA!',
+              'QUALIDADE, PONTUALIDADE E O MELHOR PREÇO DA REGIÃO!',
+              'LIGOU, CHEGOU • SUA CARGA EM BOAS MÃOS!'
+            ].map((text) => (
+              <button
+                key={text}
+                type="button"
+                onClick={() => onChange({ footerText: text })}
+                className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded transition-colors"
+              >
+                {text}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* 7. FORMATO DO PANFLETO */}
-      <div className="space-y-3">
-        <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
-          Formato do Panfleto
-        </label>
-        <div className="grid grid-cols-3 gap-2">
+      {/* 7. FORMATO DE IMPRESSÃO & DIVULGAÇÃO */}
+      <div className="space-y-3 border-b border-zinc-800 pb-5">
+        <div className="flex items-center justify-between">
+          <label className="flex items-center gap-2 text-amber-400 font-bold text-base">
+            <Printer className="w-5 h-5" />
+            <span>Formatos de Impressão & Divulgação</span>
+          </label>
+          <span className="text-[10px] bg-amber-400/20 text-amber-300 font-bold px-2 py-0.5 rounded">
+            Folha Dupla, 4 por Folha, 1:1, Paisagem
+          </span>
+        </div>
+        
+        <p className="text-xs text-zinc-400">
+          Escolha o formato ideal para economizar papel e tinta na impressão ou gerar para redes sociais:
+        </p>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
           {formats.map((f) => (
             <button
               key={f.id}
               type="button"
               onClick={() => onChange({ format: f.id })}
-              className={`py-2.5 px-2 text-center rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+              className={`p-3 text-left rounded-xl border transition-all cursor-pointer ${
                 data.format === f.id
-                  ? 'bg-amber-400 text-zinc-950 border-amber-400 font-black shadow-md'
+                  ? 'bg-amber-400/15 text-amber-300 border-amber-400 ring-2 ring-amber-400/40 font-black shadow-md'
                   : 'bg-zinc-950 text-zinc-300 border-zinc-800 hover:border-zinc-700'
               }`}
             >
-              {f.label}
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-black text-zinc-100">
+                  {f.label}
+                </span>
+                <span className="text-[9px] bg-zinc-800 text-amber-400 px-1.5 py-0.5 rounded font-bold">
+                  {f.iconTag}
+                </span>
+              </div>
+              <p className="text-[10px] text-zinc-400 leading-tight">
+                {f.desc}
+              </p>
             </button>
           ))}
         </div>
+      </div>
+
+      {/* 8. ORDENAÇÃO DOS ELEMENTOS (ARRASTE COM O MOUSE) */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-amber-400 font-bold text-base">
+            <GripVertical className="w-5 h-5" />
+            <span>Disposição & Ordem dos Elementos</span>
+          </div>
+          <span className="text-[10px] bg-amber-400 text-zinc-950 font-black px-2 py-0.5 rounded">
+            Arrastar c/ Mouse
+          </span>
+        </div>
+
+        <ElementOrderManager
+          order={data.elementOrder || ['header', 'photo', 'card1', 'servicesCards', 'footer']}
+          onChange={(newOrder) => onChange({ elementOrder: newOrder })}
+        />
       </div>
 
     </div>

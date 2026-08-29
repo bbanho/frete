@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { FlyerData } from './types';
+import { FlyerData, FlyerFormat, FlyerElementKey } from './types';
 import { DEFAULT_FLYER_DATA } from './data/defaults';
 import { FlyerView } from './components/FlyerView';
 import { FlyerEditor } from './components/FlyerEditor';
@@ -24,11 +24,13 @@ import {
   Truck, 
   Check, 
   Eye, 
-  Sliders,
-  Maximize2,
-  ZoomIn,
-  ZoomOut,
-  Contrast
+  Sliders, 
+  ZoomIn, 
+  ZoomOut, 
+  Contrast, 
+  GripVertical,
+  Layers,
+  Scissors
 } from 'lucide-react';
 
 export default function App() {
@@ -41,6 +43,16 @@ export default function App() {
   const [isGrayscalePreview, setIsGrayscalePreview] = useState<boolean>(false);
 
   const flyerViewRef = useRef<HTMLDivElement>(null);
+
+  // Formatos rápidos disponíveis
+  const formatOptions: { id: FlyerFormat; label: string; iconTag: string }[] = [
+    { id: 'vertical', label: '1x A4 Vertical', iconTag: '1x A4' },
+    { id: 'double-a5', label: 'Folha Dupla (2x A5)', iconTag: '2x A5' },
+    { id: '4-up', label: '4 por Folha A4', iconTag: '4x A4' },
+    { id: 'square', label: '1:1 Quadrado', iconTag: '1:1' },
+    { id: 'landscape', label: 'Paisagem', iconTag: 'Faixa' },
+    { id: 'card', label: 'Cartão', iconTag: 'Mini' }
+  ];
 
   // Generate QR Code dynamically based on phone number
   useEffect(() => {
@@ -59,6 +71,14 @@ export default function App() {
     setData(prev => ({ ...prev, ...updated }));
   };
 
+  const handleReorderElements = (newOrder: FlyerElementKey[]) => {
+    setData(prev => ({ ...prev, ...elementOrderKey(newOrder) }));
+  };
+
+  const elementOrderKey = (newOrder: FlyerElementKey[]) => ({
+    elementOrder: newOrder
+  });
+
   // Download flyer as high-res PNG image
   const handleDownloadImage = async () => {
     if (!flyerViewRef.current) return;
@@ -73,7 +93,7 @@ export default function App() {
         .replace(/\s+/g, '-')
         .toLowerCase()
         .replace(/[^a-z0-9-]/g, '');
-      link.download = `panfleto-fretes-${safeName || 'divulgacao'}.png`;
+      link.download = `panfleto-fretes-${data.format}-${safeName || 'divulgacao'}.png`;
       link.href = dataUrl;
       link.click();
     } catch (err) {
@@ -124,7 +144,7 @@ export default function App() {
                 Panfleto de Fretes & Cargas
               </h1>
               <p className="text-xs text-zinc-400">
-                1 Card em Destaque + 2 Cards Secundários • Fontes Imponentes • HTML Liberado
+                Folha Dupla • 1:1 • Paisagem • Reordenação por Arraste • Alta Legibilidade
               </p>
             </div>
           </div>
@@ -162,7 +182,7 @@ export default function App() {
             }`}
           >
             <Eye className="w-4 h-4" />
-            <span>Ver Panfleto</span>
+            <span>Ver Panfleto ({data.format})</span>
           </button>
           <button
             onClick={() => setMobileTab('edit')}
@@ -173,7 +193,7 @@ export default function App() {
             }`}
           >
             <Sliders className="w-4 h-4" />
-            <span>Editar & HTML</span>
+            <span>Editar & Organizar</span>
           </button>
         </div>
       </header>
@@ -182,15 +202,50 @@ export default function App() {
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
-          {/* COLUNA ESQUERDA: VISUALIZADOR DO PANFLETO (AMPLIADO PARA OCUPAR MAIS ESPAÇO) */}
-          <section className={`lg:col-span-6 flex flex-col items-center gap-4 ${mobileTab === 'edit' ? 'hidden sm:flex' : 'flex'}`}>
+          {/* COLUNA ESQUERDA: VISUALIZADOR DO PANFLETO */}
+          <section className={`lg:col-span-6 flex flex-col items-center gap-3.5 ${mobileTab === 'edit' ? 'hidden sm:flex' : 'flex'}`}>
+            
+            {/* Barra Rápida de Formatos de Impressão & Visualização */}
+            <div className="w-full bg-zinc-900/90 border border-zinc-800 rounded-xl p-2.5 space-y-2 no-print shadow">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-zinc-300 flex items-center gap-1.5">
+                  <Printer className="w-3.5 h-3.5 text-amber-400" />
+                  Formato de Impressão / Envio:
+                </span>
+                <span className="text-[10px] text-amber-400 font-bold bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/30">
+                  {data.format === 'double-a5' ? '2 por Folha A4' : data.format === '4-up' ? '4 por Folha A4' : data.format.toUpperCase()}
+                </span>
+              </div>
+
+              {/* Pílulas de Seleção Rápida de Formato */}
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                {formatOptions.map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => handleDataChange({ format: f.id })}
+                    className={`px-2 py-1.5 rounded-lg text-[11px] font-black transition-all cursor-pointer truncate ${
+                      data.format === f.id
+                        ? 'bg-amber-400 text-zinc-950 shadow-md ring-1 ring-amber-300'
+                        : 'bg-zinc-950 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 border border-zinc-800'
+                    }`}
+                    title={f.label}
+                  >
+                    {f.iconTag}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Dica de Reordenação por Arraste e Controles de Zoom */}
             <div className="w-full flex items-center justify-between text-xs text-zinc-400 px-1 no-print">
               <div className="flex items-center gap-1.5">
-                <span className="font-bold text-zinc-200">
-                  Visualização do Panfleto
+                <GripVertical className="w-3.5 h-3.5 text-amber-400" />
+                <span className="text-[11px] text-zinc-300 font-medium hidden sm:inline">
+                  Arraste os blocos no panfleto para reordenar
                 </span>
-                <span className="bg-amber-400/20 text-amber-300 font-bold px-2 py-0.5 rounded text-[10px] uppercase">
-                  {data.fontFamily}
+                <span className="text-[11px] text-zinc-300 font-medium sm:hidden">
+                  Arraste os blocos p/ ordenar
                 </span>
               </div>
 
@@ -234,7 +289,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Container do Panfleto (Renderizado) */}
+            {/* Container do Panfleto (Renderizado Responsivo) */}
             <div 
               className="w-full flex justify-center py-2 print-only-container transition-transform duration-200 origin-top"
               style={{
@@ -247,11 +302,12 @@ export default function App() {
                 data={data}
                 qrCodeUrl={qrCodeUrl}
                 isGrayscalePreview={isGrayscalePreview}
+                onReorderElements={handleReorderElements}
               />
             </div>
 
             {/* Botões de Ação Imediata (Mobile + Desktop) */}
-            <div className="w-full max-w-[580px] grid grid-cols-2 gap-2.5 no-print pt-2">
+            <div className="w-full max-w-[620px] grid grid-cols-2 gap-2.5 no-print pt-2">
               <button
                 onClick={handleDownloadImage}
                 disabled={isExporting}
@@ -280,7 +336,7 @@ export default function App() {
             </div>
 
             {/* Teste direto do link do WhatsApp */}
-            <div className="w-full max-w-[580px] bg-zinc-900/80 border border-zinc-800 rounded-xl p-3.5 flex items-center justify-between gap-3 text-xs no-print shadow">
+            <div className="w-full max-w-[620px] bg-zinc-900/80 border border-zinc-800 rounded-xl p-3.5 flex items-center justify-between gap-3 text-xs no-print shadow">
               <div className="text-zinc-400">
                 <span className="text-zinc-200 font-bold block">Contato Rápido:</span>
                 Ao clicar ou escanear, abre direto a conversa no WhatsApp
@@ -297,14 +353,14 @@ export default function App() {
             </div>
           </section>
 
-          {/* COLUNA DIREITA: EDITOR DE INFORMAÇÕES & SUPORTE A HTML */}
+          {/* COLUNA DIREITA: EDITOR DE INFORMAÇÕES, FORMATOS & ARRASTE */}
           <section className={`lg:col-span-6 ${mobileTab === 'preview' ? 'hidden sm:block' : 'block'} no-print`}>
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm sm:text-base font-black text-zinc-200">
-                Personalização com HTML & 3 Cards
+              <h2 className="text-sm sm:text-base font-black text-zinc-200 flex items-center gap-2">
+                <span>Personalização, Formatos & Ordenação</span>
               </h2>
               <span className="text-xs text-amber-400 font-bold bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/30">
-                HTML Permitido
+                HTML & Arraste Liberados
               </span>
             </div>
 
@@ -319,8 +375,9 @@ export default function App() {
 
       {/* FOOTER DISCRETO */}
       <footer className="no-print border-t border-zinc-900 bg-zinc-950/80 py-4 px-4 text-center text-xs text-zinc-500">
-        Panfleto de Fretes • 1 Card em Destaque + 2 Cards Secundários • Fontes Imponentes • Suporte Completo a Tags HTML.
+        Panfleto de Fretes • Formatos Múltiplos (Folha Dupla, 4 por Folha, 1:1, Paisagem, A4) • Reordenação por Arraste com o Mouse • HTML Permitido.
       </footer>
     </div>
   );
 }
+
