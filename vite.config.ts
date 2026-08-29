@@ -5,11 +5,7 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
-    base: '/frete/',
     plugins: [react(), tailwindcss()],
-    build: {
-      outDir: 'docs',
-    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
