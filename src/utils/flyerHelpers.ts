@@ -44,23 +44,43 @@ export function formatPhoneMask(val: string): string {
     .slice(0, 15);
 }
 
+export function stripHtmlToWhatsApp(html: string): string {
+  if (!html) return '';
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/?b>/gi, '*')
+    .replace(/<\/?strong>/gi, '*')
+    .replace(/<\/?i>/gi, '_')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .trim();
+}
+
 export function generateWhatsAppBroadcastText(data: {
-  headline: string;
+  title: string;
   driverName: string;
   phone: string;
+  phoneSecondary: string;
   vehicleType: string;
-  services: string[];
-  coverageArea: string;
-  paymentNotice: string;
+  card2Title: string;
+  card2Content: string;
+  card3Title: string;
+  card3Content: string;
+  footerText: string;
 }): string {
-  const serviceList = data.services.map(s => `✔️ ${s}`).join('\n');
-  return `🚛 *${data.headline}* 🚛\n` +
-    `👤 *${data.driverName}*\n\n` +
-    `🚚 *Veículo:* ${data.vehicleType}\n` +
-    `📍 *Atendemos:* ${data.coverageArea}\n\n` +
-    `*SERVIÇOS REALIZADOS:*\n${serviceList}\n\n` +
-    `💳 *Pagamento:* ${data.paymentNotice}\n\n` +
-    `📞 *CONTATO DIRETO:* ${data.phone}\n` +
-    `📲 WhatsApp: ${getWhatsAppUrl(data.phone, '')}\n\n` +
-    `_Peça seu orçamento sem compromisso agora mesmo!_`;
+  const cleanTitle = stripHtmlToWhatsApp(data.title);
+  const cleanDriver = stripHtmlToWhatsApp(data.driverName);
+  const cleanVehicle = stripHtmlToWhatsApp(data.vehicleType);
+  const cleanCard2 = stripHtmlToWhatsApp(data.card2Content);
+  const cleanCard3 = stripHtmlToWhatsApp(data.card3Content);
+
+  return `🚛 *${cleanTitle}* 🚛\n` +
+    (cleanDriver ? `👤 *${cleanDriver}*\n` : '') +
+    (cleanVehicle ? `🚚 *Veículo:* ${cleanVehicle}\n\n` : '\n') +
+    `*${data.card2Title.toUpperCase()}:*\n${cleanCard2}\n\n` +
+    `*${data.card3Title.toUpperCase()}:*\n${cleanCard3}\n\n` +
+    `📞 *CONTATO / WHATSAPP:* ${data.phone}\n` +
+    (data.phoneSecondary ? `📞 *Tel Secundário:* ${data.phoneSecondary}\n` : '') +
+    `📲 Link direto: ${getWhatsAppUrl(data.phone, '')}\n\n` +
+    `_${stripHtmlToWhatsApp(data.footerText)}_`;
 }

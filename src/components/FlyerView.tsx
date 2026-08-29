@@ -1,95 +1,210 @@
 import React, { forwardRef } from 'react';
 import { FlyerData } from '../types';
-import { Phone, MessageSquare } from 'lucide-react';
+import { SafeHtml } from './SafeHtml';
+import { Phone, MessageCircle, Truck, MapPin, CreditCard, ShieldCheck, Sparkles, CheckCircle, ChevronRight } from 'lucide-react';
 
 interface FlyerViewProps {
   data: FlyerData;
   qrCodeUrl?: string;
-  isCompact?: boolean;
+  isGrayscalePreview?: boolean;
 }
 
-export const FlyerView = forwardRef<HTMLDivElement, FlyerViewProps>(({ data, qrCodeUrl, isCompact }, ref) => {
-  // Theme color styles prioritizing maximum contrast and readability without heavy graphics
+export const FlyerView = forwardRef<HTMLDivElement, FlyerViewProps>(({ data, qrCodeUrl, isGrayscalePreview = false }, ref) => {
+  // Theme color styles prioritizing extreme contrast for color and grayscale printing
   const themeStyles = {
     'yellow-black': {
       bg: 'bg-amber-400',
       text: 'text-zinc-950',
-      topBannerBg: 'bg-zinc-950 text-amber-400',
-      phoneCardBg: 'bg-zinc-950 text-amber-300 border-4 border-zinc-900',
-      badgeBg: 'bg-zinc-900 text-white',
-      accentBg: 'bg-zinc-950 text-white',
-      borderAccent: 'border-zinc-950'
+      topBannerBg: 'bg-zinc-950 text-amber-300 border-b-4 border-zinc-950',
+      topBannerSub: 'text-amber-200/90',
+      driverBadge: 'bg-amber-400 text-zinc-950 border-2 border-zinc-950',
+      card1Bg: 'bg-zinc-950 text-white border-4 border-zinc-900 shadow-2xl',
+      card1TitleColor: 'text-amber-400',
+      card1Badge: 'bg-amber-400 text-zinc-950 border-2 border-amber-300',
+      card1PhoneColor: 'text-amber-300',
+      card1HighlightBg: 'bg-zinc-900 border-2 border-amber-400/40 text-amber-200',
+      card2Bg: 'bg-zinc-950 text-zinc-100 border-3 border-zinc-900 shadow-lg',
+      card3Bg: 'bg-zinc-950 text-zinc-100 border-3 border-zinc-900 shadow-lg',
+      cardHeaderBg: 'bg-zinc-900/90 text-amber-300 border-b-2 border-zinc-800',
+      cardTitleColor: 'text-amber-300 font-black',
+      cardIconBg: 'bg-amber-400 text-zinc-950',
+      borderAccent: 'border-zinc-950',
+      footerBg: 'bg-zinc-950 text-amber-300 border-t-4 border-zinc-950',
+      photoBorder: 'border-4 border-zinc-950 shadow-xl'
     },
-    'blue-white': {
+    'black-gold': {
+      bg: 'bg-zinc-950',
+      text: 'text-zinc-100',
+      topBannerBg: 'bg-amber-400 text-zinc-950 border-b-4 border-amber-500',
+      topBannerSub: 'text-zinc-900 font-bold',
+      driverBadge: 'bg-zinc-950 text-amber-300 border-2 border-amber-400',
+      card1Bg: 'bg-zinc-900 text-white border-4 border-amber-400 shadow-2xl',
+      card1TitleColor: 'text-amber-400',
+      card1Badge: 'bg-amber-400 text-zinc-950 border-2 border-amber-300',
+      card1PhoneColor: 'text-amber-300',
+      card1HighlightBg: 'bg-black/60 border-2 border-amber-400/50 text-amber-200',
+      card2Bg: 'bg-zinc-900 text-zinc-100 border-3 border-amber-400/40 shadow-lg',
+      card3Bg: 'bg-zinc-900 text-zinc-100 border-3 border-amber-400/40 shadow-lg',
+      cardHeaderBg: 'bg-zinc-950 text-amber-300 border-b-2 border-amber-400/30',
+      cardTitleColor: 'text-amber-300 font-black',
+      cardIconBg: 'bg-amber-400 text-zinc-950',
+      borderAccent: 'border-amber-400',
+      footerBg: 'bg-amber-400 text-zinc-950 border-t-4 border-amber-500',
+      photoBorder: 'border-4 border-amber-400 shadow-xl'
+    },
+    'blue-yellow': {
+      bg: 'bg-blue-950',
+      text: 'text-white',
+      topBannerBg: 'bg-amber-400 text-blue-950 border-b-4 border-amber-500',
+      topBannerSub: 'text-blue-900 font-bold',
+      driverBadge: 'bg-blue-950 text-amber-300 border-2 border-amber-400',
+      card1Bg: 'bg-blue-900 text-white border-4 border-amber-400 shadow-2xl',
+      card1TitleColor: 'text-amber-300',
+      card1Badge: 'bg-amber-400 text-blue-950 border-2 border-amber-300',
+      card1PhoneColor: 'text-amber-300',
+      card1HighlightBg: 'bg-blue-950 border-2 border-amber-400/40 text-amber-200',
+      card2Bg: 'bg-blue-900 text-white border-3 border-amber-400/50 shadow-lg',
+      card3Bg: 'bg-blue-900 text-white border-3 border-amber-400/50 shadow-lg',
+      cardHeaderBg: 'bg-blue-950 text-amber-300 border-b-2 border-amber-400/30',
+      cardTitleColor: 'text-amber-300 font-black',
+      cardIconBg: 'bg-amber-400 text-blue-950',
+      borderAccent: 'border-amber-400',
+      footerBg: 'bg-amber-400 text-blue-950 border-t-4 border-amber-500',
+      photoBorder: 'border-4 border-amber-400 shadow-xl'
+    },
+    'red-black': {
+      bg: 'bg-red-700',
+      text: 'text-zinc-100',
+      topBannerBg: 'bg-zinc-950 text-yellow-300 border-b-4 border-zinc-950',
+      topBannerSub: 'text-yellow-200/90',
+      driverBadge: 'bg-yellow-400 text-zinc-950 border-2 border-zinc-950',
+      card1Bg: 'bg-zinc-950 text-white border-4 border-yellow-400 shadow-2xl',
+      card1TitleColor: 'text-yellow-300',
+      card1Badge: 'bg-yellow-400 text-zinc-950 border-2 border-yellow-300',
+      card1PhoneColor: 'text-yellow-300',
+      card1HighlightBg: 'bg-zinc-900 border-2 border-yellow-400/40 text-yellow-200',
+      card2Bg: 'bg-zinc-950 text-white border-3 border-yellow-400/40 shadow-lg',
+      card3Bg: 'bg-zinc-950 text-white border-3 border-yellow-400/40 shadow-lg',
+      cardHeaderBg: 'bg-zinc-900 text-yellow-300 border-b-2 border-yellow-400/30',
+      cardTitleColor: 'text-yellow-300 font-black',
+      cardIconBg: 'bg-yellow-400 text-zinc-950',
+      borderAccent: 'border-yellow-400',
+      footerBg: 'bg-zinc-950 text-yellow-300 border-t-4 border-zinc-950',
+      photoBorder: 'border-4 border-zinc-950 shadow-xl'
+    },
+    'clean-white': {
+      bg: 'bg-zinc-100',
+      text: 'text-zinc-950',
+      topBannerBg: 'bg-zinc-950 text-white border-b-4 border-zinc-950',
+      topBannerSub: 'text-zinc-300',
+      driverBadge: 'bg-white text-zinc-950 border-2 border-zinc-950 font-black',
+      card1Bg: 'bg-white text-zinc-950 border-4 border-zinc-950 shadow-2xl',
+      card1TitleColor: 'text-zinc-950',
+      card1Badge: 'bg-zinc-950 text-white border-2 border-zinc-800',
+      card1PhoneColor: 'text-zinc-950',
+      card1HighlightBg: 'bg-zinc-100 border-2 border-zinc-950 text-zinc-900',
+      card2Bg: 'bg-white text-zinc-950 border-3 border-zinc-950 shadow-lg',
+      card3Bg: 'bg-white text-zinc-950 border-3 border-zinc-950 shadow-lg',
+      cardHeaderBg: 'bg-zinc-950 text-white border-b-2 border-zinc-950',
+      cardTitleColor: 'text-white font-black',
+      cardIconBg: 'bg-white text-zinc-950',
+      borderAccent: 'border-zinc-950',
+      footerBg: 'bg-zinc-950 text-white border-t-4 border-zinc-950',
+      photoBorder: 'border-4 border-zinc-950 shadow-xl'
+    },
+    'print-grayscale': {
       bg: 'bg-white',
-      text: 'text-slate-900',
-      topBannerBg: 'bg-blue-900 text-white',
-      phoneCardBg: 'bg-blue-900 text-yellow-300 border-4 border-blue-950',
-      badgeBg: 'bg-blue-800 text-white',
-      accentBg: 'bg-blue-950 text-white',
-      borderAccent: 'border-blue-900'
-    },
-    'clean-light': {
-      bg: 'bg-zinc-50',
-      text: 'text-zinc-900',
-      topBannerBg: 'bg-zinc-900 text-white',
-      phoneCardBg: 'bg-emerald-700 text-white border-4 border-emerald-900',
-      badgeBg: 'bg-zinc-800 text-white',
-      accentBg: 'bg-zinc-900 text-white',
-      borderAccent: 'border-zinc-800'
-    },
-    'dark-contrast': {
-      bg: 'bg-zinc-900',
-      text: 'text-zinc-50',
-      topBannerBg: 'bg-amber-400 text-zinc-950',
-      phoneCardBg: 'bg-amber-400 text-zinc-950 border-4 border-amber-300',
-      badgeBg: 'bg-zinc-800 text-zinc-100 border border-zinc-700',
-      accentBg: 'bg-zinc-800 text-zinc-100',
-      borderAccent: 'border-amber-400'
+      text: 'text-black',
+      topBannerBg: 'bg-black text-white border-b-4 border-black',
+      topBannerSub: 'text-zinc-200 font-bold',
+      driverBadge: 'bg-white text-black border-2 border-black font-black',
+      card1Bg: 'bg-black text-white border-4 border-black shadow-none',
+      card1TitleColor: 'text-white',
+      card1Badge: 'bg-white text-black border-2 border-black font-black',
+      card1PhoneColor: 'text-white',
+      card1HighlightBg: 'bg-zinc-900 border-2 border-white/80 text-white',
+      card2Bg: 'bg-white text-black border-3 border-black shadow-none',
+      card3Bg: 'bg-white text-black border-3 border-black shadow-none',
+      cardHeaderBg: 'bg-black text-white border-b-3 border-black',
+      cardTitleColor: 'text-white font-black',
+      cardIconBg: 'bg-white text-black',
+      borderAccent: 'border-black',
+      footerBg: 'bg-black text-white border-t-4 border-black',
+      photoBorder: 'border-4 border-black shadow-none'
     }
   }[data.theme] || {
     bg: 'bg-amber-400',
     text: 'text-zinc-950',
-    topBannerBg: 'bg-zinc-950 text-amber-400',
-    phoneCardBg: 'bg-zinc-950 text-amber-300 border-4 border-zinc-900',
-    badgeBg: 'bg-zinc-900 text-white',
-    accentBg: 'bg-zinc-950 text-white',
-    borderAccent: 'border-zinc-950'
+    topBannerBg: 'bg-zinc-950 text-amber-300 border-b-4 border-zinc-950',
+    topBannerSub: 'text-amber-200/90',
+    driverBadge: 'bg-amber-400 text-zinc-950 border-2 border-zinc-950',
+    card1Bg: 'bg-zinc-950 text-white border-4 border-zinc-900 shadow-2xl',
+    card1TitleColor: 'text-amber-400',
+    card1Badge: 'bg-amber-400 text-zinc-950 border-2 border-amber-300',
+    card1PhoneColor: 'text-amber-300',
+    card1HighlightBg: 'bg-zinc-900 border-2 border-amber-400/40 text-amber-200',
+    card2Bg: 'bg-zinc-950 text-zinc-100 border-3 border-zinc-900 shadow-lg',
+    card3Bg: 'bg-zinc-950 text-zinc-100 border-3 border-zinc-900 shadow-lg',
+    cardHeaderBg: 'bg-zinc-900/90 text-amber-300 border-b-2 border-zinc-800',
+    cardTitleColor: 'text-amber-300 font-black',
+    cardIconBg: 'bg-amber-400 text-zinc-950',
+    borderAccent: 'border-zinc-950',
+    footerBg: 'bg-zinc-950 text-amber-300 border-t-4 border-zinc-950',
+    photoBorder: 'border-4 border-zinc-950 shadow-xl'
   };
 
-  // Format sizing
+  // Font family mapping for imposing typography
+  const fontClass = {
+    anton: 'font-anton',
+    bebas: 'font-bebas tracking-wider',
+    archivo: 'font-archivo tracking-tight',
+    oswald: 'font-oswald tracking-wide',
+    montserrat: 'font-montserrat tracking-tight',
+    rubik: 'font-rubik tracking-tight'
+  }[data.fontFamily] || 'font-anton';
+
+  // Format classes (ampliado para ocupar mais espaço na tela)
   const formatClasses = {
-    vertical: 'w-full max-w-[480px] min-h-[640px] aspect-[1/1.414]', // A4 ratio
-    square: 'w-full max-w-[480px] aspect-square',
-    card: 'w-full max-w-[500px] min-h-[290px] aspect-[1.75/1]'
+    vertical: 'w-full max-w-[600px] min-h-[860px]',
+    square: 'w-full max-w-[600px] aspect-square',
+    card: 'w-full max-w-[600px] min-h-[400px]'
   }[data.format];
 
   return (
     <div
       ref={ref}
       id="panfleto-caminhao-fretes"
-      className={`${formatClasses} ${themeStyles.bg} ${themeStyles.text} rounded-xl shadow-2xl overflow-hidden flex flex-col justify-between select-none relative transition-all duration-200`}
+      className={`${formatClasses} ${themeStyles.bg} ${themeStyles.text} rounded-2xl shadow-2xl overflow-hidden flex flex-col justify-between select-none relative transition-all duration-200 border-4 ${themeStyles.borderAccent} ${isGrayscalePreview ? 'grayscale contrast-125' : ''}`}
       style={{
-        boxSizing: 'border-box',
-        fontFamily: "'Inter', system-ui, sans-serif"
+        boxSizing: 'border-box'
       }}
     >
-      {/* 1. TOPO: TÍTULO SUCINTO DE ALTO IMPACTO */}
-      <div className={`${themeStyles.topBannerBg} px-4 py-3 text-center tracking-tight`}>
-        <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-wide font-oswald leading-tight">
-          {data.title || 'FRETES EM GERAL'}
-        </h1>
+      {/* 1. TOPO: TÍTULO SUPER IMPONENTE COM SUPORTE A HTML */}
+      <div className={`${themeStyles.topBannerBg} px-4 py-3.5 text-center`}>
+        <div className={`text-3xl sm:text-4xl md:text-5xl font-black uppercase leading-tight ${fontClass}`}>
+          <SafeHtml content={data.title || 'FRETES EM GERAL'} />
+        </div>
+        
+        {data.subtitle && (
+          <div className={`text-xs sm:text-sm font-black uppercase tracking-wider mt-1 ${themeStyles.topBannerSub}`}>
+            <SafeHtml content={data.subtitle} />
+          </div>
+        )}
+        
         {data.driverName && (
-          <p className="text-xs sm:text-sm font-semibold opacity-90 tracking-normal mt-0.5">
-            {data.driverName} • {data.vehicleType}
-          </p>
+          <div className="mt-2 inline-flex items-center justify-center">
+            <div className={`text-xs sm:text-sm font-black px-3.5 py-0.5 rounded-full shadow-sm ${themeStyles.driverBadge}`}>
+              <SafeHtml content={`🚛 ${data.driverName}`} />
+            </div>
+          </div>
         )}
       </div>
 
-      {/* 2. CORPO: FOTO DO CAMINHÃO + INFORMAÇÕES SUCINTAS */}
-      <div className="flex-1 p-3 sm:p-4 flex flex-col justify-between gap-3">
-        {/* Foto Original do Caminhão */}
-        <div className="relative w-full rounded-lg overflow-hidden bg-black/10 border-2 border-black/20 flex-1 min-h-[140px] max-h-[220px] flex items-center justify-center">
+      {/* 2. CORPO PRINCIPAL COM FOTO DO CAMINHÃO E OS 3 CARDS MODERNIZADOS */}
+      <div className="flex-1 p-3.5 sm:p-4 md:p-5 flex flex-col justify-between gap-3.5">
+        
+        {/* FOTO ORIGINAL DO CAMINHÃO COM ALTO CONTRASTE */}
+        <div className={`relative w-full rounded-xl overflow-hidden bg-black/30 ${themeStyles.photoBorder} min-h-[175px] max-h-[265px] flex items-center justify-center`}>
           {data.truckPhotoUrl ? (
             <img
               src={data.truckPhotoUrl}
@@ -98,74 +213,127 @@ export const FlyerView = forwardRef<HTMLDivElement, FlyerViewProps>(({ data, qrC
               crossOrigin="anonymous"
             />
           ) : (
-            <div className="p-4 text-center font-bold text-sm opacity-60">
-              [ Foto do Caminhão ]
+            <div className="p-6 text-center font-black text-base opacity-70">
+              [ FOTO DO CAMINHÃO ]
             </div>
           )}
+
           {data.vehicleType && (
-            <div className="absolute bottom-2 left-2 bg-black/80 text-white text-[11px] font-bold px-2 py-1 rounded">
-              {data.vehicleType}
+            <div className="absolute bottom-2.5 left-2.5 bg-black text-white text-xs sm:text-sm font-black px-3 py-1 rounded-lg border-2 border-white shadow-xl flex items-center gap-1.5">
+              <Truck className="w-4 h-4 text-amber-300" />
+              <SafeHtml content={data.vehicleType} />
             </div>
           )}
         </div>
 
-        {/* Resumo Sucinto dos Serviços e Região */}
-        <div className="grid grid-cols-1 gap-2 text-xs sm:text-sm font-medium">
-          {data.servicesSummary && (
-            <div className="bg-black/5 p-2 rounded border border-black/10">
-              <div className="font-bold uppercase text-[11px] tracking-wider opacity-75 mb-1">
-                Serviços Realizados:
-              </div>
-              <div className="whitespace-pre-line font-bold leading-snug">
-                {data.servicesSummary}
-              </div>
+        {/* 🌟 CARD 1: MEGA BLOCO DE CONTATO & WHATSAPP (MODERNIZADO & ALTO CONTRASTE P/ P&B) */}
+        <div className={`${themeStyles.card1Bg} rounded-2xl p-4 sm:p-5 relative overflow-hidden transition-all`}>
+          
+          {/* Header do Card 1: Badge Moderno com Ícone */}
+          <div className="flex items-center justify-between mb-3 border-b-2 border-white/15 pb-2">
+            <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs sm:text-sm font-black uppercase tracking-wider shadow-sm ${themeStyles.card1Badge}`}>
+              <Phone className="w-3.5 h-3.5" />
+              <SafeHtml content={data.card1Title || 'LIGUE OU CHAME NO WHATSAPP'} />
             </div>
-          )}
 
-          {data.coverageArea && (
-            <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-bold opacity-90 px-1">
-              <span>📍 Região:</span>
-              <span>{data.coverageArea}</span>
+            <div className="hidden sm:flex items-center gap-1 text-[11px] font-black uppercase tracking-tight opacity-90">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>Atendimento 24h</span>
             </div>
-          )}
-        </div>
+          </div>
 
-        {/* 3. BLOCO DE CONTATO EM MÁXIMO DESTAQUE (TELEFONE / WHATSAPP) */}
-        <div className={`${themeStyles.phoneCardBg} rounded-xl p-3 sm:p-4 text-center shadow-md flex items-center justify-between gap-3`}>
-          <div className="flex-1 text-center">
-            <div className="text-[11px] sm:text-xs font-black uppercase tracking-wider mb-0.5 opacity-90 flex items-center justify-center gap-1">
-              <Phone className="w-3.5 h-3.5 inline" />
-              Ligue ou Chame no WhatsApp
-            </div>
-            <div className="text-xl sm:text-2xl md:text-3xl font-black font-oswald tracking-wider leading-none py-0.5">
-              {data.phone || '(00) 00000-0000'}
-            </div>
-            {data.phoneSecondary && (
-              <div className="text-xs sm:text-sm font-bold opacity-80 mt-0.5">
-                Tel. Alternativo: {data.phoneSecondary}
+          <div className="flex items-center justify-between gap-3 sm:gap-5">
+            {/* Números de Telefone Grandes e Ultra Legíveis em P&B */}
+            <div className="flex-1 text-center sm:text-left">
+              <div className={`text-3xl sm:text-4xl md:text-5xl font-black leading-none ${fontClass} tracking-wide ${themeStyles.card1PhoneColor} drop-shadow`}>
+                <SafeHtml content={data.phone || '(00) 00000-0000'} />
               </div>
-            )}
-            {data.paymentInfo && (
-              <div className="text-[10px] sm:text-[11px] font-semibold opacity-75 mt-1 border-t border-white/20 pt-1">
-                Pagamento: {data.paymentInfo}
+
+              {data.phoneSecondary && (
+                <div className="text-sm sm:text-base font-black mt-2 flex items-center justify-center sm:justify-start gap-1.5">
+                  <span className="bg-white/20 text-white text-[10px] uppercase font-black px-1.5 py-0.5 rounded">
+                    2º Tel
+                  </span>
+                  <span className="opacity-95 font-bold">
+                    <SafeHtml content={data.phoneSecondary} />
+                  </span>
+                </div>
+              )}
+
+              {data.card1Highlight && (
+                <div className={`text-xs sm:text-xs font-black mt-2.5 px-2.5 py-1.5 rounded-lg text-center sm:text-left ${themeStyles.card1HighlightBg}`}>
+                  <SafeHtml content={data.card1Highlight} />
+                </div>
+              )}
+            </div>
+
+            {/* QR Code de Alto Contraste (Fundo branco puro + borda preta sólida p/ leitura a laser) */}
+            {data.showQrCode && qrCodeUrl && (
+              <div className="bg-white p-2 rounded-xl border-3 border-black flex-shrink-0 flex flex-col items-center shadow-2xl">
+                <img src={qrCodeUrl} alt="QR Code WhatsApp" className="w-18 h-18 sm:w-22 sm:h-22" />
+                <span className="text-[10px] text-black font-black uppercase mt-1 tracking-tight leading-none bg-amber-400 px-1.5 py-0.5 rounded">
+                  ESCANEIE AQUI
+                </span>
               </div>
             )}
           </div>
-
-          {/* QR Code opcional para escanear direto */}
-          {data.showQrCode && qrCodeUrl && (
-            <div className="bg-white p-1 rounded-lg border border-black/20 flex-shrink-0 flex flex-col items-center">
-              <img src={qrCodeUrl} alt="QR Code WhatsApp" className="w-14 h-14 sm:w-16 sm:h-16" />
-              <span className="text-[8px] text-zinc-800 font-bold uppercase mt-0.5">WhatsApp</span>
-            </div>
-          )}
         </div>
+
+        {/* 🌟 OS 2 CARDS A SEGUIR: SERVIÇOS + REGIÃO/PAGAMENTO (MODERNOS & NITIDEZ MÁXIMA EM ESCALA DE CINZA) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          
+          {/* CARD 2: SERVIÇOS DE FRETES (MODERNIZADO) */}
+          <div className={`${themeStyles.card2Bg} rounded-xl overflow-hidden flex flex-col justify-start transition-all`}>
+            {/* Header com barra de contraste */}
+            <div className={`${themeStyles.cardHeaderBg} px-3.5 py-2 flex items-center justify-between`}>
+              <div className="flex items-center gap-2">
+                <span className={`${themeStyles.cardIconBg} p-1 rounded-md flex items-center justify-center`}>
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                </span>
+                <span className={`text-xs sm:text-sm ${themeStyles.cardTitleColor}`}>
+                  <SafeHtml content={data.card2Title || 'SERVIÇOS DE FRETES'} />
+                </span>
+              </div>
+              <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+            </div>
+
+            {/* Conteúdo com tipografia nítida e espaçamento proporcional */}
+            <div className="p-3 sm:p-3.5 text-xs sm:text-sm font-medium leading-relaxed">
+              <SafeHtml content={data.card2Content} />
+            </div>
+          </div>
+
+          {/* CARD 3: REGIÃO & PAGAMENTO (MODERNIZADO) */}
+          <div className={`${themeStyles.card3Bg} rounded-xl overflow-hidden flex flex-col justify-start transition-all`}>
+            {/* Header com barra de contraste */}
+            <div className={`${themeStyles.cardHeaderBg} px-3.5 py-2 flex items-center justify-between`}>
+              <div className="flex items-center gap-2">
+                <span className={`${themeStyles.cardIconBg} p-1 rounded-md flex items-center justify-center`}>
+                  <MapPin className="w-3.5 h-3.5" />
+                </span>
+                <span className={`text-xs sm:text-sm ${themeStyles.cardTitleColor}`}>
+                  <SafeHtml content={data.card3Title || 'REGIÃO & PAGAMENTO'} />
+                </span>
+              </div>
+              <CreditCard className="w-3.5 h-3.5 opacity-60" />
+            </div>
+
+            {/* Conteúdo com tipografia nítida */}
+            <div className="p-3 sm:p-3.5 text-xs sm:text-sm font-medium leading-relaxed">
+              <SafeHtml content={data.card3Content} />
+            </div>
+          </div>
+
+        </div>
+
       </div>
 
-      {/* 4. RODAPÉ SUCINTO */}
-      <div className="text-center py-1.5 px-3 bg-black/10 text-[10px] font-semibold opacity-80 border-t border-black/10">
-        Orçamento rápido sem compromisso • Pontualidade e Segurança
-      </div>
+      {/* 3. RODAPÉ SUCINTO COM ALTO CONTRASTE */}
+      {data.footerText && (
+        <div className={`${themeStyles.footerBg} text-center py-2.5 px-3 text-xs sm:text-sm font-black tracking-wide`}>
+          <SafeHtml content={data.footerText} />
+        </div>
+      )}
     </div>
   );
 });

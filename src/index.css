@@ -2,10 +2,24 @@
 
 @layer utilities {
   .font-anton {
-    font-family: 'Anton', impact, sans-serif;
+    font-family: 'Anton', Impact, sans-serif;
+  }
+  .font-bebas {
+    font-family: 'Bebas Neue', Impact, sans-serif;
+  }
+  .font-archivo {
+    font-family: 'Archivo Black', Impact, sans-serif;
   }
   .font-oswald {
     font-family: 'Oswald', sans-serif;
+  }
+  .font-montserrat {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 900;
+  }
+  .font-rubik {
+    font-family: 'Rubik', sans-serif;
+    font-weight: 900;
   }
   .font-inter {
     font-family: 'Inter', sans-serif;
