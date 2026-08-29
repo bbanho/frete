@@ -1,0 +1,6 @@
+{
+  "name": "Panfleto de Fretes & Mudanças",
+  "description": "Gerador e divulgador de panfletos de fretes com foto do caminhão, telefone em destaque, alta legibilidade e compatibilidade web e mobile.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
